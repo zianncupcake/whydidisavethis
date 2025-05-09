@@ -37,6 +37,9 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "backendEndpoint": "https://myfoods-backend-817cd60e47a9.herokuapp.com"
     }
   }
 }
