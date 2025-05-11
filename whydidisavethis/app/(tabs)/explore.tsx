@@ -1,5 +1,5 @@
 import { Platform, StyleSheet, TextInput, Button, Alert, View } from 'react-native';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 // import { Collapsible } from '@/components/Collapsible'; // No longer needed
 // import { ExternalLink } from '@/components/ExternalLink'; // No longer needed
@@ -8,7 +8,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import Constants from 'expo-constants';
-
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 export default function TabTwoScreen() {
   const [socialMediaLink, setSocialMediaLink] = useState('');
@@ -23,12 +23,18 @@ export default function TabTwoScreen() {
 
   const BACKEND_API_URL = Constants.expoConfig?.extra?.backendEndpoint;
   const ws = useRef<WebSocket | null>(null);
+  const router = useRouter();
+
+  const { url: deepLinkUrlParam } = useLocalSearchParams<{ url?: string | string[] }>();
+  const deepLinkUrl = Array.isArray(deepLinkUrlParam) ? deepLinkUrlParam[0] : deepLinkUrlParam;
+  // Use lastProcessedDeepLink to handle distinct deep links correctly
+  const [lastProcessedDeepLink, setLastProcessedDeepLink] = useState<string | null>(null);
 
   const logToConsole = (...args: any[]) => {
     console.log('[ExploreScreen WS]', ...args);
   };
 
-  const connectWebSocket = (taskId: string) => {
+  const connectWebSocket = useCallback((taskId: string, submittedLink: string) => {
     if (!BACKEND_API_URL) {
       Alert.alert('Configuration Error', 'Backend API URL is not configured.');
       setIsLoading(false);
@@ -69,7 +75,7 @@ export default function TabTwoScreen() {
             const { data, error } = message.result;
             if (data && !error) {
               setTitle(data.title || '');
-              setSourceUrl(socialMediaLink);
+              setSourceUrl(submittedLink);
               setNotes(data.desc || '');
               setCategories(data.diversificationLabels ? data.diversificationLabels.join(', ') : '');
               setTags(data.suggestedWords ? data.suggestedWords.join(', ') : '');
@@ -121,28 +127,57 @@ export default function TabTwoScreen() {
         // setIsLoading(false); // Already handled by onerror or onmessage for final states
       }
     };
-  };
+  }, []);
 
-  const handleAutofill = async () => {
-    if (!socialMediaLink.trim()) {
-      Alert.alert('Input Required', 'Please paste an Instagram or TikTok link to autofill.');
+  const processAutofill = useCallback(async (urlToSubmit: string) => {
+    // Prevent new submissions if one is already in progress
+    if (isLoading) {
+      logToConsole(`Autofill for "${urlToSubmit}" attempted while task "${currentTaskId || 'N/A'}" is already processing. Ignoring new request.`);
+      Alert.alert("Processing Busy", "Another link is currently being processed. Please wait.");
       return;
     }
-    console.log('Attempting to autofill with link:', socialMediaLink);
 
-    setIsLoading(true);
-    setCurrentTaskId(null);
+    if (!urlToSubmit.trim()) {
+      Alert.alert('Input Required', 'A valid link is needed to autofill.');
+      // No need to setIsLoading(false) here as it wasn't set true yet for this path
+      return;
+    }
+    if (!BACKEND_API_URL) {
+      Alert.alert('Configuration Error', 'Backend API endpoint is not configured.');
+      // No need to setIsLoading(false) here
+      return;
+    }
+
+    setIsLoading(true); // Set loading state for the current operation
+    setCurrentTaskId(null); // Reset task ID for the new submission
+
+    const submitUrlPath = `${BACKEND_API_URL}/submit_url`;
+    logToConsole('Submitting URL:', urlToSubmit, 'to:', submitUrlPath);
 
     try {
-      console.log("BACKEND API URL", BACKEND_API_URL)
-      const response = await fetch(`${BACKEND_API_URL}/submit_url`, {
+      const response = await fetch(submitUrlPath, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: socialMediaLink }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: urlToSubmit }),
       });
-      const data = await response.json();
+      // const data = await response.json();
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonParseError: any) {
+        logToConsole('JSON Parse Error:', jsonParseError.message);
+        try {
+          const textResponse = await response.text();
+          logToConsole('Non-JSON Response from server:', textResponse);
+          Alert.alert('Server Error', `Received an unexpected response from the server. Status: ${response.status}. Check console for details.`);
+        } catch (textReadError) {
+          logToConsole('Failed to read response as text:', textReadError);
+          Alert.alert('Server Error', `Unparseable response. Status: ${response.status}`);
+        }
+        setIsLoading(false);
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(data.detail || `Failed to submit URL (${response.status})`);
@@ -150,26 +185,82 @@ export default function TabTwoScreen() {
 
       if (data.task_id) {
         Alert.alert('URL Submitted', `Processing started. Task ID: ${data.task_id}. Waiting for updates...`);
-        setCurrentTaskId(data.task_id);
-        connectWebSocket(data.task_id);
+        setCurrentTaskId(data.task_id); // Set the new task ID
+        connectWebSocket(data.task_id, urlToSubmit);
       } else {
         Alert.alert('Submission Error', data.message || 'Failed to get a task ID.');
-        setIsLoading(false);
+        setIsLoading(false); // Reset loading if submission itself failed to return a task_id
       }
     } catch (error: any) {
       logToConsole('Autofill API submission error:', error);
       Alert.alert('Submission Error', `Could not submit URL: ${error.message}`);
-      setIsLoading(false);
+      setIsLoading(false); // Reset loading on error
     }
+    // `connectWebSocket` is stable due to its own useCallback([], ...)
+    // `isLoading` and `currentTaskId` are included to ensure the initial check uses their current values.
+  }, [isLoading, currentTaskId, connectWebSocket]);
 
-    // --- End Backend Call Placeholder ---
-
-    // For demonstration, let's populate some fields (remove this when using actual API)
-    // setTitle('Autofilled Title (Demo)');
-    // if (!sourceUrl) setSourceUrl(socialMediaLink); // Keep the pasted link if sourceUrl isn't already set by user
-    // setNotes('Autofilled notes from the link (Demo)');
-    // setCreator('Creator from link (Demo)');
+  const handleAutofillButtonPressed = () => {
+    processAutofill(socialMediaLink);
   };
+
+  useEffect(() => {
+    // Process deep link URL if it's new and different from the last processed one
+    if (deepLinkUrl && deepLinkUrl !== lastProcessedDeepLink) {
+      try {
+        const decodedUrl = decodeURIComponent(deepLinkUrl);
+        logToConsole(`Received new deep link URL: ${decodedUrl}`);
+        setSocialMediaLink(decodedUrl); // Update input field for user visibility
+        processAutofill(decodedUrl);    // Process the new URL
+        setLastProcessedDeepLink(deepLinkUrl); // Mark this specific (encoded) deepLinkUrl as processed
+      } catch (e) {
+        logToConsole('Failed to decode deep link URL:', e);
+        Alert.alert('Error', 'Received an invalid URL via deep link.');
+        setLastProcessedDeepLink(deepLinkUrl); // Mark as processed to avoid error loops with the same invalid URL
+      }
+    }
+    // `processAutofill` is now a dependency. `router` is stable.
+  }, [deepLinkUrl, lastProcessedDeepLink, processAutofill, router]);
+
+  // const handleAutofill = async () => {
+  //   if (!socialMediaLink.trim()) {
+  //     Alert.alert('Input Required', 'Please paste an Instagram or TikTok link to autofill.');
+  //     return;
+  //   }
+  //   console.log('Attempting to autofill with link:', socialMediaLink);
+
+  //   setIsLoading(true);
+  //   setCurrentTaskId(null);
+
+  //   try {
+  //     console.log("BACKEND API URL", BACKEND_API_URL)
+  //     const response = await fetch(`${BACKEND_API_URL}/submit_url`, {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({ url: socialMediaLink }),
+  //     });
+  //     const data = await response.json();
+
+  //     if (!response.ok) {
+  //       throw new Error(data.detail || `Failed to submit URL (${response.status})`);
+  //     }
+
+  //     if (data.task_id) {
+  //       Alert.alert('URL Submitted', `Processing started. Task ID: ${data.task_id}. Waiting for updates...`);
+  //       setCurrentTaskId(data.task_id);
+  //       connectWebSocket(data.task_id);
+  //     } else {
+  //       Alert.alert('Submission Error', data.message || 'Failed to get a task ID.');
+  //       setIsLoading(false);
+  //     }
+  //   } catch (error: any) {
+  //     logToConsole('Autofill API submission error:', error);
+  //     Alert.alert('Submission Error', `Could not submit URL: ${error.message}`);
+  //     setIsLoading(false);
+  //   }
+  // };
 
   // Cleanup WebSocket on component unmount
   useEffect(() => {
@@ -232,7 +323,7 @@ export default function TabTwoScreen() {
         />
         {/* Using a View for Button to allow more styling if needed */}
         <View style={styles.buttonContainer}>
-          <Button title="Autofill with Link" onPress={handleAutofill} color={Platform.OS === 'ios' ? '#007AFF' : undefined} />
+          <Button title="Autofill with Link" onPress={handleAutofillButtonPressed} color={Platform.OS === 'ios' ? '#007AFF' : undefined} />
         </View>
       </ThemedView>
 
