@@ -1,22 +1,22 @@
 import { Platform, StyleSheet, TextInput, Button, Alert, View } from 'react-native';
 import { useState, useEffect, useRef, useCallback } from 'react';
-
-// import { Collapsible } from '@/components/Collapsible'; // No longer needed
-// import { ExternalLink } from '@/components/ExternalLink'; // No longer needed
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import Constants from 'expo-constants';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import PillInput from '@/components/PillInput';
 
 export default function TabTwoScreen() {
   const [socialMediaLink, setSocialMediaLink] = useState('');
   const [title, setTitle] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [notes, setNotes] = useState('');
-  const [categories, setCategories] = useState(''); // Handled as comma-separated string
-  const [tags, setTags] = useState(''); // Handled as comma-separated string
+  const [categories, setCategories] = useState<string[]>([]);
+  const [suggestedCategories, setSuggestedCategories] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
+  const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
   const [creator, setCreator] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
@@ -36,24 +36,21 @@ export default function TabTwoScreen() {
 
   const connectWebSocket = useCallback((taskId: string, submittedLink: string) => {
     if (!BACKEND_API_URL) {
-      Alert.alert('Configuration Error', 'Backend API URL is not configured.');
+      logToConsole('Configuration Error', 'Backend API URL is not configured.');
+      setCurrentTaskId(null);
       setIsLoading(false);
       return;
     }
 
-    // Construct WebSocket URL (ws:// or wss://)
-    // Ensure your BACKEND_API_URL is just the base (e.g., http://localhost:8000)
-    // WebSocket URLs typically replace http with ws and https with wss.
     const wsScheme = BACKEND_API_URL.startsWith('https:') ? 'wss:' : 'ws:';
     const wsUrlBase = BACKEND_API_URL.replace(/^https?:/, '');
     const webSocketUrl = `${wsScheme}${wsUrlBase}/ws/task_status/${taskId}`;
 
     logToConsole(`Attempting to connect to WebSocket: ${webSocketUrl}`);
 
-    // Close any existing connection before opening a new one
     if (ws.current && ws.current.readyState !== WebSocket.CLOSED) {
-      logToConsole('Closing existing WebSocket connection.');
-      ws.current.close();
+      logToConsole('CONNECT_WEBSOCKET: Closing existing WebSocket connection.');
+      ws.current.close(1000, "New connection requested");
     }
 
     ws.current = new WebSocket(webSocketUrl);
@@ -71,33 +68,39 @@ export default function TabTwoScreen() {
 
         if (message.task_id === taskId) {
           if (message.status === 'SUCCESS' || message.status === 'SUCCESSFUL') {
-            Alert.alert('Processing Complete!', 'Content details have been fetched via WebSocket.');
+            logToConsole('Processing Complete!', 'Content details have been fetched via WebSocket.');
             const { data, error } = message.result;
             if (data && !error) {
               setTitle(data.title || '');
               setSourceUrl(submittedLink);
               setNotes(data.desc || '');
-              setCategories(data.diversificationLabels ? data.diversificationLabels.join(', ') : '');
-              setTags(data.suggestedWords ? data.suggestedWords.join(', ') : '');
+              // setCategories(data.diversificationLabels ? data.diversificationLabels.join(', ') : '');
+              // setTags(data.suggestedWords ? data.suggestedWords.join(', ') : '');
+              setSuggestedTags(Array.isArray(data.suggestedWords) ? data.suggestedWords.filter((tag: string) => tag.trim() !== '') : []);
+              setSuggestedCategories(Array.isArray(data.diversificationLabels) ? data.diversificationLabels.filter((cat: string) => cat.trim() !== '') : []);
               setCreator(data.creator || '');
+              logToConsole(`ONMESSAGE: SUCCESS processed for ${taskId}. Setting isLoading=false, currentTaskId=null.`);
             } else if (data && data.error) {
               Alert.alert('Task Error', `The processing task failed: ${data.error}`);
+              logToConsole(`ONMESSAGE: Task data error for ${taskId}. Setting isLoading=false, currentTaskId=null.`);
             } else {
               Alert.alert('Task Error', 'Processing completed but result format is unexpected.');
+              logToConsole(`ONMESSAGE: Unexpected result format for ${taskId}. Setting isLoading=false, currentTaskId=null.`);
             }
             setIsLoading(false);
             setCurrentTaskId(null);
-            ws.current?.close();
+            setSocialMediaLink('')
+            ws.current?.close(1000, "Task successful");
           } else if (message.status === 'FAILURE' || message.status === 'FAILED') {
             Alert.alert('Processing Failed', `Task failed: ${JSON.stringify(message.result?.error || message.result)}`);
             setIsLoading(false);
             setCurrentTaskId(null);
-            ws.current?.close();
+            ws.current?.close(1000, "Task failed");
           } else if (message.status === 'ERROR' || message.status === 'UNKNOWN_STATUS') {
             Alert.alert('Processing Issue', `An issue occurred: ${JSON.stringify(message.result?.error || "Unknown error")}`);
             setIsLoading(false);
             setCurrentTaskId(null);
-            ws.current?.close();
+            ws.current?.close(1000, "Task error/unknown");
           }
           // Other statuses like PENDING or STARTED might be sent by the backend
           // if you configured it to do so. Handle them if needed.
@@ -105,9 +108,11 @@ export default function TabTwoScreen() {
       } catch (error) {
         logToConsole('Error processing WebSocket message:', error);
         Alert.alert('WebSocket Error', 'Received an invalid message from the server.');
-        setIsLoading(false);
-        setCurrentTaskId(null);
-        ws.current?.close();
+        if (currentTaskId === taskId) { // Check against current state if this error is for the active task
+          setIsLoading(false);
+          setCurrentTaskId(null);
+        }
+        ws.current?.close(1006, "Message parsing error");
       }
     };
 
@@ -127,7 +132,7 @@ export default function TabTwoScreen() {
         // setIsLoading(false); // Already handled by onerror or onmessage for final states
       }
     };
-  }, []);
+  }, [isLoading, currentTaskId, BACKEND_API_URL]);
 
   const processAutofill = useCallback(async (urlToSubmit: string) => {
     // Prevent new submissions if one is already in progress
@@ -148,6 +153,10 @@ export default function TabTwoScreen() {
       return;
     }
 
+    setTags([]);
+    setSuggestedTags([]);
+    setCategories([]);
+    setSuggestedCategories([]);
     setIsLoading(true); // Set loading state for the current operation
     setCurrentTaskId(null); // Reset task ID for the new submission
 
@@ -155,32 +164,42 @@ export default function TabTwoScreen() {
     logToConsole('Submitting URL:', urlToSubmit, 'to:', submitUrlPath);
 
     try {
+      logToConsole('PROCESS_AUTOFILL: Attempting response.json()...');
       const response = await fetch(submitUrlPath, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: urlToSubmit }),
       });
       // const data = await response.json();
-
+      logToConsole('PROCESS_AUTOFILL: Fetch response received. Status:', response?.status, 'Ok:', response?.ok);
       let data;
       try {
-        data = await response.json();
+        logToConsole('PROCESS_AUTOFILL: Attempting response.json()...');
+        data = await response.json(); // This might fail if response is not JSON
+        logToConsole('PROCESS_AUTOFILL: response.json() successful. Data:', data);
       } catch (jsonParseError: any) {
-        logToConsole('JSON Parse Error:', jsonParseError.message);
-        try {
-          const textResponse = await response.text();
-          logToConsole('Non-JSON Response from server:', textResponse);
-          Alert.alert('Server Error', `Received an unexpected response from the server. Status: ${response.status}. Check console for details.`);
-        } catch (textReadError) {
-          logToConsole('Failed to read response as text:', textReadError);
-          Alert.alert('Server Error', `Unparseable response. Status: ${response.status}`);
+        logToConsole('PROCESS_AUTOFILL: JSON Parse Error:', jsonParseError.message);
+        // Attempt to get the response as text to see what was actually returned
+        if (response) { // Check if response object exists
+          try {
+            const textResponse = await response.text();
+            logToConsole('PROCESS_AUTOFILL: Non-JSON Response from server:', textResponse);
+            Alert.alert('Server Error', `Received an unexpected response. Status: ${response.status}. Check console for details.`);
+          } catch (textReadError) {
+            logToConsole('PROCESS_AUTOFILL: Failed to read response as text:', textReadError);
+            Alert.alert('Server Error', `Unparseable response. Status: ${response.status}`);
+          }
+        } else {
+          Alert.alert('Network Error', 'No response received from server for JSON parse step.');
         }
         setIsLoading(false);
         return;
       }
 
       if (!response.ok) {
-        throw new Error(data.detail || `Failed to submit URL (${response.status})`);
+        logToConsole('PROCESS_AUTOFILL: Response not OK. Status:', response.status, 'Parsed Data:', data);
+        const errorMessage = data?.detail || data?.message || `Failed to submit URL (HTTP ${response.status})`;
+        throw new Error(errorMessage);
       }
 
       if (data.task_id) {
@@ -198,7 +217,7 @@ export default function TabTwoScreen() {
     }
     // `connectWebSocket` is stable due to its own useCallback([], ...)
     // `isLoading` and `currentTaskId` are included to ensure the initial check uses their current values.
-  }, [isLoading, currentTaskId, connectWebSocket]);
+  }, [isLoading, currentTaskId, connectWebSocket, BACKEND_API_URL]);
 
   const handleAutofillButtonPressed = () => {
     processAutofill(socialMediaLink);
@@ -222,67 +241,26 @@ export default function TabTwoScreen() {
     // `processAutofill` is now a dependency. `router` is stable.
   }, [deepLinkUrl, lastProcessedDeepLink, processAutofill, router]);
 
-  // const handleAutofill = async () => {
-  //   if (!socialMediaLink.trim()) {
-  //     Alert.alert('Input Required', 'Please paste an Instagram or TikTok link to autofill.');
-  //     return;
-  //   }
-  //   console.log('Attempting to autofill with link:', socialMediaLink);
-
-  //   setIsLoading(true);
-  //   setCurrentTaskId(null);
-
-  //   try {
-  //     console.log("BACKEND API URL", BACKEND_API_URL)
-  //     const response = await fetch(`${BACKEND_API_URL}/submit_url`, {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify({ url: socialMediaLink }),
-  //     });
-  //     const data = await response.json();
-
-  //     if (!response.ok) {
-  //       throw new Error(data.detail || `Failed to submit URL (${response.status})`);
-  //     }
-
-  //     if (data.task_id) {
-  //       Alert.alert('URL Submitted', `Processing started. Task ID: ${data.task_id}. Waiting for updates...`);
-  //       setCurrentTaskId(data.task_id);
-  //       connectWebSocket(data.task_id);
-  //     } else {
-  //       Alert.alert('Submission Error', data.message || 'Failed to get a task ID.');
-  //       setIsLoading(false);
-  //     }
-  //   } catch (error: any) {
-  //     logToConsole('Autofill API submission error:', error);
-  //     Alert.alert('Submission Error', `Could not submit URL: ${error.message}`);
-  //     setIsLoading(false);
-  //   }
-  // };
-
-  // Cleanup WebSocket on component unmount
   useEffect(() => {
     return () => {
       if (ws.current) {
         logToConsole('ExploreScreen unmounting. Closing WebSocket.');
-        ws.current.close();
+        ws.current.close(1000, "Component unmounting");
       }
     };
   }, []);
 
   const handleSubmit = () => {
-    const postData = {
-      title: title || null,
-      source_url: sourceUrl || null,
-      notes: notes || null,
-      categories: categories.split(',').map(cat => cat.trim()).filter(cat => cat) || null,
-      tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag) || null,
-      creator: creator || null,
-    };
-    console.log('Form Data:', postData);
-    Alert.alert('Post Saved (Dev)', `Data: ${JSON.stringify(postData, null, 2)}`);
+    // const postData = {
+    //   title: title || null,
+    //   source_url: sourceUrl || null,
+    //   notes: notes || null,
+    //   categories: categories.split(',').map(cat => cat.trim()).filter(cat => cat) || null,
+    //   tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag) || null,
+    //   creator: creator || null,
+    // };
+    // console.log('Form Data:', postData);
+    // Alert.alert('Post Saved (Dev)', `Data: ${JSON.stringify(postData, null, 2)}`);
     // Here you would typically send postData to your backend to save it
     // After successful submission, you might want to clear the form:
     // setSocialMediaLink('');
@@ -362,22 +340,24 @@ export default function TabTwoScreen() {
           numberOfLines={4}
         />
 
-        <ThemedText style={styles.label}>Categories (Optional, comma-separated)</ThemedText>
-        <TextInput
-          style={[styles.input, styles.textInput]}
-          value={categories}
-          onChangeText={setCategories}
-          placeholder="E.g., recipes, travel, tech tips"
-          placeholderTextColor="#888"
+        <PillInput
+          label="Categories (Optional)"
+          placeholder="Type a category and press enter"
+          selectedItems={categories}
+          onSetSelectedItems={setCategories}
+          suggestedItems={suggestedCategories}
+          onSetSuggestedItems={setSuggestedCategories}
+          editable={!isLoading}
         />
 
-        <ThemedText style={styles.label}>Tags (Optional, comma-separated)</ThemedText>
-        <TextInput
-          style={[styles.input, styles.textInput]}
-          value={tags}
-          onChangeText={setTags}
-          placeholder="E.g., easy_cook, future_trip, must_read"
-          placeholderTextColor="#888"
+        <PillInput
+          label="Tags (Optional)"
+          placeholder="Type a tag and press enter"
+          selectedItems={tags}
+          onSetSelectedItems={setTags}
+          suggestedItems={suggestedTags}
+          onSetSuggestedItems={setSuggestedTags}
+          editable={!isLoading}
         />
 
         <ThemedText style={styles.label}>Creator (Optional)</ThemedText>
@@ -445,7 +425,7 @@ const styles = StyleSheet.create({
     backgroundColor: Platform.OS === 'ios' ? '#FFFFFF' : '#FFFFFF', // Placeholder
   },
   multilineInput: {
-    height: 100,
+    height: 200,
     textAlignVertical: 'top', // For Android
     paddingTop: 10,
   },
