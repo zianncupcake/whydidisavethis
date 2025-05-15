@@ -1,9 +1,7 @@
-import { Platform, StyleSheet, TextInput, Button, Alert, View } from 'react-native';
+import { Platform, StyleSheet, TextInput, Button, Alert, View, ScrollView } from 'react-native';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
 import Constants from 'expo-constants';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import PillInput from '@/components/PillInput';
@@ -27,7 +25,6 @@ export default function TabTwoScreen() {
 
   const { url: deepLinkUrlParam } = useLocalSearchParams<{ url?: string | string[] }>();
   const deepLinkUrl = Array.isArray(deepLinkUrlParam) ? deepLinkUrlParam[0] : deepLinkUrlParam;
-  // Use lastProcessedDeepLink to handle distinct deep links correctly
   const [lastProcessedDeepLink, setLastProcessedDeepLink] = useState<string | null>(null);
 
   const logToConsole = (...args: any[]) => {
@@ -273,25 +270,16 @@ export default function TabTwoScreen() {
   };
 
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080" // Consider making this color dynamic with theme
-          name="chevron.left.forwardslash.chevron.right" // This seems like a placeholder icon, you might want a more relevant one
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Save New Post</ThemedText>
-      </ThemedView>
-
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      keyboardShouldPersistTaps="handled"
+    >
       {/* Autofill Section */}
       <ThemedView style={styles.sectionContainer}>
         <ThemedText type="subtitle" style={styles.subtitle}>Autofill from Social Media</ThemedText>
         <TextInput
-          style={[styles.input, styles.textInput]} // Apply base and specific styles
+          style={[styles.input, styles.textInput]}
           placeholder="Paste Instagram or TikTok link hereeee"
           placeholderTextColor="#888"
           value={socialMediaLink}
@@ -372,21 +360,22 @@ export default function TabTwoScreen() {
           <Button title="Save Post" onPress={handleSubmit} color={Platform.OS === 'ios' ? '#007AFF' : undefined} />
         </View>
       </ThemedView>
-    </ParallaxScrollView>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    // color: '#808080', // This color is now passed directly via props for IconSymbol
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 60,
+    paddingTop: Platform.OS === 'ios' ? 60 : 10,
   },
   titleContainer: {
     flexDirection: 'row',
     gap: 8,
-    paddingHorizontal: 16, // Added padding for better spacing
+    paddingHorizontal: 16,
     paddingBottom: 16,
   },
   sectionContainer: {
