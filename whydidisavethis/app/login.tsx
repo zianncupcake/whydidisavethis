@@ -3,6 +3,7 @@ import { Button, View, Text, StyleSheet, TextInput, ActivityIndicator, Alert, To
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from "@/utils/authContext";
 import { useContext, useState } from "react";
+import { Link } from 'expo-router';
 
 export default function LoginScreen() {
     const authContext = useContext(AuthContext);
@@ -18,6 +19,8 @@ export default function LoginScreen() {
         const loginSuccessful = await authContext.logIn(username, password);
 
         if (loginSuccessful) {
+            setUsername('');
+            setPassword('');
             console.log("[LoginScreen] Login successful callback received.");
         } else {
             console.log("[LoginScreen] Login failed callback received. Error should be in authContext.actionError.");
@@ -67,6 +70,12 @@ export default function LoginScreen() {
             ) : (
                 <Button title="Login" onPress={handleLogin} />
             )}
+
+            <Link href="/signup" asChild style={styles.linkContainer} disabled={authContext.isLoadingAction}>
+                <TouchableOpacity>
+                    <Text style={styles.linkText}>Don&apos;t have an account? Sign Up</Text>
+                </TouchableOpacity>
+            </Link>
         </View>
     );
 }

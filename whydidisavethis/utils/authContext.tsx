@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SplashScreen, useRouter } from "expo-router";
 import React, { createContext, PropsWithChildren, useEffect, useState, useContext, useMemo } from "react";
 import { apiService } from "../lib/apiService";
+import { Alert } from "react-native";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -13,6 +14,7 @@ type AuthState = {
     actionError: string | null;
     logIn: (username_form: string, password_form: string) => Promise<boolean>;
     logOut: () => Promise<void>;
+    signUp: (username_form: string, password_form: string) => Promise<boolean>;
 };
 
 const authStorageKey = "auth-key";
@@ -29,6 +31,10 @@ export const AuthContext = createContext<AuthState>({
     },
     logOut: async () => {
         console.warn("Logout function not implemented in context default");
+    },
+    signUp: async () => {
+        console.warn("Singup function not implemented in context default");
+        return false;
     },
 });
 
@@ -126,6 +132,29 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
     };
 
+    const signUp = async (username_form: string, password_form: string): Promise<boolean> => {
+        setIsLoadingAction(true);
+        setActionError(null);
+        console.log(`[AuthProvider] signUp: Attempting for user: ${username_form}`);
+        try {
+            // Assuming your apiService.signup exists and handles the call
+            // It might return user data or just a success status
+            await apiService.signup(username_form, password_form);
+
+            setIsLoadingAction(false);
+            console.log("[AuthProvider] signUp: API success.");
+            Alert.alert("Signup Successful!", "Please proceed to login with your new credentials.");
+            router.push('/login'); // Navigate to login screen after successful signup
+            return true;
+        } catch (error: any) {
+            const message = error.message || "Signup failed. Please try again.";
+            console.error("[AuthProvider] signUp: API error -", message, error);
+            setActionError(message);
+            setIsLoadingAction(false);
+            return false;
+        }
+    };
+
     // You no longer need the separate `storeAuthState` function
     // as token storage is handled within logIn and logOut.
 
@@ -138,6 +167,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         actionError,
         logIn,
         logOut,
+        signUp
     }), [isReady, isLoggedIn, token, isLoadingAction, actionError]);
 
     return (

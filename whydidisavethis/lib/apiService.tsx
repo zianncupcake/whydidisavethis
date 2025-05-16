@@ -86,7 +86,7 @@ export const apiService = {
     },
 
     signup: async (username_req: string, password_req: string): Promise<UserResponse> => {
-        const endpoint = `/users/register`;
+        const endpoint = `/users/`;
         console.log(`[apiService] axios signup: Calling ${API_BASE_URL}${endpoint}`);
 
         try {
