@@ -62,7 +62,7 @@ class ShareViewController: UIViewController {
         print("[ShareExtension] Raw shared URL string: \(originalSharedURL)")
 
         let scheme = "whydidisavethis"
-        let pathSegment = "explore"
+        let pathSegment = "add"
 
         var baseURLString = "\(scheme):///\(pathSegment)" // Using /// for path-based routing
 
