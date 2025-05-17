@@ -6,7 +6,13 @@ import { Alert } from "react-native";
 
 SplashScreen.preventAutoHideAsync();
 
+export interface User {
+    id: number;
+    username: string;
+}
+
 type AuthState = {
+    user: User | null;
     isLoggedIn: boolean;
     isReady: boolean;
     token: string | null;
@@ -20,6 +26,7 @@ type AuthState = {
 const authStorageKey = "auth-key";
 
 export const AuthContext = createContext<AuthState>({
+    user: null,
     isLoggedIn: false,
     isReady: false,
     token: null,
@@ -48,6 +55,7 @@ export const useAuth = () => {
 };
 
 export function AuthProvider({ children }: PropsWithChildren) {
+    const [user, setUser] = useState<User | null>(null);
     const [isReady, setIsReady] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [token, setToken] = useState<string | null>(null);
@@ -60,13 +68,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const getAuthFromStorage = async () => {
             console.log("[AuthProvider] Checking auth status from storage...");
             try {
-                const storedToken = await AsyncStorage.getItem(authStorageKey); // Now expecting a token string
-                if (storedToken !== null) {
+                const storedToken = await AsyncStorage.getItem(authStorageKey);
+                if (storedToken) {
                     console.log("[AuthProvider] Token found in storage:", storedToken);
+                    const storedUser = await apiService.getUserFromToken(storedToken);
+                    setUser(storedUser)
                     setToken(storedToken);
                     setIsLoggedIn(true);
                 } else {
                     console.log("[AuthProvider] No token found in storage.");
+                    setUser(null);
                     setToken(null);
                     setIsLoggedIn(false);
                 }
@@ -95,8 +106,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
         try {
             const response = await apiService.login(username_form, password_form);
             const newToken = response.access_token;
-
             await AsyncStorage.setItem(authStorageKey, newToken);
+            const user = await apiService.getUserFromToken(newToken);
+
+            setUser(user);
             setToken(newToken);
             setIsLoggedIn(true);
             setIsLoadingAction(false);
@@ -108,6 +121,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
             console.error("[AuthProvider] logIn: API call failed -", message, error);
             setActionError(message);
             await AsyncStorage.removeItem(authStorageKey);
+            setUser(null);
             setToken(null);
             setIsLoggedIn(false);
             setIsLoadingAction(false);
@@ -124,6 +138,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
             console.error("[AuthProvider] logOut: Error removing token from storage", error);
         } finally {
             setToken(null);
+            setUser(null);
             setIsLoggedIn(false);
             setActionError(null);
             setIsLoadingAction(false);
@@ -160,6 +175,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     // Memoize context value
     const contextValue = useMemo(() => ({
+        user,
         isReady,
         isLoggedIn,
         token,

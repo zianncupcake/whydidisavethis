@@ -27,16 +27,35 @@ interface UserResponse {
     username: string;
 }
 
+export interface ItemCreatePayload {
+    title: string;
+    user_id: number;
+    source_url?: string;
+    notes?: string;
+    categories?: string[];
+    tags?: string[];
+    creator?: string;
+}
+export interface ItemResponse {
+    id: number;
+    title: string;
+    user_id: number;
+    source_url?: string | null;
+    notes?: string | null;
+    categories: string[];
+    tags: string[];
+    creator?: string | null;
+}
+
 interface ApiErrorDetailItem {
     msg: string;
     type: string;
 }
 
-interface ApiErrorData { // Renamed from ApiErrorResponse to avoid conflict with AxiosError.response
+interface ApiErrorData {
     detail?: string | ApiErrorDetailItem[];
 }
 
-// Custom error class remains useful
 export class ApiServiceError extends Error {
     status?: number;
     errorData?: ApiErrorData;
@@ -66,7 +85,7 @@ export const apiService = {
                 },
             });
             console.log("[apiService] axios login: Success", response.data);
-            return response.data; // Axios puts response data in `data`
+            return response.data;
         } catch (error) {
             const axiosError = error as AxiosError<ApiErrorData>;
             console.error("[apiService] axios login: Error", axiosError.response?.data || axiosError.message);
@@ -119,7 +138,7 @@ export const apiService = {
         }
     },
 
-    getMyProfile: async (token: string): Promise<UserResponse> => {
+    getUserFromToken: async (token: string): Promise<UserResponse> => {
         const endpoint = `/users/me`;
         console.log(`[apiService] axios getMyProfile: Calling ${API_BASE_URL}${endpoint}`);
         try {
@@ -139,6 +158,37 @@ export const apiService = {
             const status = axiosError.response?.status;
             if (errorData?.detail) { /* ... */ }
             throw new ApiServiceError(errorMessage, status, errorData);
+        }
+    },
+
+    addItem: async (itemData: ItemCreatePayload): Promise<ItemResponse> => {
+        const endpoint = `/items/`;
+        console.log(`[apiService] axios addItem: Calling ${API_BASE_URL}${endpoint}`);
+
+        try {
+            const response = await apiClient.post<ItemResponse>(endpoint, itemData, {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            console.log("[apiService] axios addItem: Success", response.data);
+            return response.data;
+        } catch (error) {
+            const axiosError = error as AxiosError<ApiErrorData>;
+            const errorResponseData = axiosError.response?.data;
+            const status = axiosError.response?.status;
+            let errorMessage = axiosError.message || 'An unexpected error occurred while adding the item.';
+
+            console.error("[apiService] axios addItem: Error", errorResponseData || axiosError.message);
+
+            if (errorResponseData?.detail) {
+                if (typeof errorResponseData.detail === 'string') {
+                    errorMessage = errorResponseData.detail;
+                } else if (Array.isArray(errorResponseData.detail)) {
+                    errorMessage = errorResponseData.detail.map(e => e.msg).join(', ');
+                }
+            }
+            throw new ApiServiceError(errorMessage, status, errorResponseData);
         }
     },
 

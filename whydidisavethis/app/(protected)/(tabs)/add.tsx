@@ -1,12 +1,16 @@
-import { Platform, StyleSheet, TextInput, Button, Alert, View, ScrollView } from 'react-native';
+import { Platform, StyleSheet, TextInput, Button, Alert, View, ScrollView, ActivityIndicator, Text } from 'react-native';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import Constants from 'expo-constants';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import PillInput from '@/components/PillInput';
+import { useAuth } from '@/utils/authContext';
+import { apiService, ApiServiceError, ItemCreatePayload, ItemResponse } from '@/lib/apiService';
 
 export default function TabTwoScreen() {
+  const { user } = useAuth();
+
   const [socialMediaLink, setSocialMediaLink] = useState('');
   const [title, setTitle] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
@@ -18,6 +22,8 @@ export default function TabTwoScreen() {
   const [creator, setCreator] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const BACKEND_API_URL = Constants.expoConfig?.extra?.backendEndpoint;
   const ws = useRef<WebSocket | null>(null);
@@ -247,26 +253,64 @@ export default function TabTwoScreen() {
     };
   }, []);
 
-  const handleSubmit = () => {
-    // const postData = {
-    //   title: title || null,
-    //   source_url: sourceUrl || null,
-    //   notes: notes || null,
-    //   categories: categories.split(',').map(cat => cat.trim()).filter(cat => cat) || null,
-    //   tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag) || null,
-    //   creator: creator || null,
-    // };
-    // console.log('Form Data:', postData);
-    // Alert.alert('Post Saved (Dev)', `Data: ${JSON.stringify(postData, null, 2)}`);
-    // Here you would typically send postData to your backend to save it
-    // After successful submission, you might want to clear the form:
-    // setSocialMediaLink('');
-    // setTitle('');
-    // setSourceUrl('');
-    // setNotes('');
-    // setCategories('');
-    // setTags('');
-    // setCreator('');
+  const handleSubmit = async () => {
+    if (!user) {
+      Alert.alert(
+        "User Not Authenticated",
+        "You need to be logged in to add an item. Please try logging in again."
+      );
+      return;
+    }
+
+    if (!title.trim()) {
+      Alert.alert("Validation Error", "Title is required.");
+      return;
+    }
+
+    const postData: ItemCreatePayload = {
+      title: title.trim(),
+      source_url: sourceUrl.trim() || undefined,
+      notes: notes.trim() || undefined,
+      categories: categories.filter(cat => cat.trim() !== ''),
+      tags: tags.filter(tag => tag.trim() !== ''),
+      creator: creator.trim() || undefined,
+      user_id: user.id,
+    };
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const createdItem: ItemResponse = await apiService.addItem(postData);
+      console.log('Item created successfully:', createdItem);
+      Alert.alert('Success!', 'Item added successfully.');
+
+      // Optionally navigate away or refresh a list
+      // router.back(); or router.push('/items/' + createdItem.id);
+
+    } catch (error) {
+      console.error('Failed to add item:', error);
+      if (error instanceof ApiServiceError) {
+        setSubmitError(error.message);
+        Alert.alert('Error Adding Item', error.message);
+      } else if (error instanceof Error) {
+        setSubmitError(error.message);
+        Alert.alert('Error', 'An unexpected error occurred: ' + error.message);
+      } else {
+        setSubmitError('An unexpected error occurred.');
+        Alert.alert('Error', 'An unexpected error occurred.');
+      }
+    } finally {
+      setIsSubmitting(false);
+      setTitle('');
+      setSourceUrl('');
+      setNotes('');
+      setCategories([]);
+      setTags([]);
+      setSuggestedCategories([]);
+      setSuggestedTags([]);
+      setCreator('');
+    }
   };
 
   return (
@@ -356,8 +400,15 @@ export default function TabTwoScreen() {
           placeholder="E.g., @username or Creator's Name"
           placeholderTextColor="#888"
         />
+
+        {submitError && <View><Text style={styles.submitError}>{submitError}</Text></View>}
+
         <View style={[styles.buttonContainer, styles.saveButtonContainer]}>
-          <Button title="Save Post" onPress={handleSubmit} color={Platform.OS === 'ios' ? '#007AFF' : undefined} />
+          {isSubmitting ? (
+            <ActivityIndicator size="large" color="#0000ff" />
+          ) : (
+            <Button title="Save Post" onPress={handleSubmit} />
+          )}
         </View>
       </ThemedView>
     </ScrollView>
@@ -424,5 +475,9 @@ const styles = StyleSheet.create({
   },
   saveButtonContainer: {
     marginTop: 20,
+  },
+  submitError: {
+    color: 'red',
+    marginVertical: 10
   }
 });

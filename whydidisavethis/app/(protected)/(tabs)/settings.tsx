@@ -1,15 +1,10 @@
-// app/(tabs)/settings.tsx (or your settings screen file path)
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
     View,
     Text,
-    TextInput,
     Button,
     ActivityIndicator,
     StyleSheet,
-    Alert,
-    ScrollView,
-    TouchableOpacity,
 } from 'react-native';
 import { useAuth } from '@/utils/authContext';
 
