@@ -26,25 +26,24 @@ interface UserResponse {
     id: number;
     username: string;
 }
-
 export interface ItemCreatePayload {
-    title: string;
     user_id: number;
     source_url?: string;
     notes?: string;
     categories?: string[];
     tags?: string[];
     creator?: string;
+    image_url?: string;
 }
 export interface ItemResponse {
     id: number;
-    title: string;
     user_id: number;
     source_url?: string | null;
     notes?: string | null;
     categories: string[];
     tags: string[];
     creator?: string | null;
+    image_url?: string | null;
 }
 
 interface ApiErrorDetailItem {

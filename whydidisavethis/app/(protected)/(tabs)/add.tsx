@@ -1,4 +1,4 @@
-import { Platform, StyleSheet, TextInput, Button, Alert, View, ScrollView, ActivityIndicator, Text } from 'react-native';
+import { Platform, StyleSheet, TextInput, Button, Alert, View, ScrollView, ActivityIndicator, Text, Image } from 'react-native';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -12,7 +12,6 @@ export default function TabTwoScreen() {
   const { user } = useAuth();
 
   const [socialMediaLink, setSocialMediaLink] = useState('');
-  const [title, setTitle] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [notes, setNotes] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
@@ -20,6 +19,7 @@ export default function TabTwoScreen() {
   const [tags, setTags] = useState<string[]>([]);
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
   const [creator, setCreator] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -74,7 +74,6 @@ export default function TabTwoScreen() {
             logToConsole('Processing Complete!', 'Content details have been fetched via WebSocket.');
             const { data, error } = message.result;
             if (data && !error) {
-              setTitle(data.title || '');
               setSourceUrl(submittedLink);
               setNotes(data.desc || '');
               // setCategories(data.diversificationLabels ? data.diversificationLabels.join(', ') : '');
@@ -82,6 +81,7 @@ export default function TabTwoScreen() {
               setSuggestedTags(Array.isArray(data.suggestedWords) ? data.suggestedWords.filter((tag: string) => tag.trim() !== '') : []);
               setSuggestedCategories(Array.isArray(data.diversificationLabels) ? data.diversificationLabels.filter((cat: string) => cat.trim() !== '') : []);
               setCreator(data.creator || '');
+              setImageUrl(data.r2ImageUrl || '');
               logToConsole(`ONMESSAGE: SUCCESS processed for ${taskId}. Setting isLoading=false, currentTaskId=null.`);
             } else if (data && data.error) {
               Alert.alert('Task Error', `The processing task failed: ${data.error}`);
@@ -262,18 +262,13 @@ export default function TabTwoScreen() {
       return;
     }
 
-    if (!title.trim()) {
-      Alert.alert("Validation Error", "Title is required.");
-      return;
-    }
-
     const postData: ItemCreatePayload = {
-      title: title.trim(),
       source_url: sourceUrl.trim() || undefined,
       notes: notes.trim() || undefined,
       categories: categories.filter(cat => cat.trim() !== ''),
       tags: tags.filter(tag => tag.trim() !== ''),
       creator: creator.trim() || undefined,
+      image_url: imageUrl.trim() || undefined,
       user_id: user.id,
     };
 
@@ -302,7 +297,6 @@ export default function TabTwoScreen() {
       }
     } finally {
       setIsSubmitting(false);
-      setTitle('');
       setSourceUrl('');
       setNotes('');
       setCategories([]);
@@ -310,6 +304,7 @@ export default function TabTwoScreen() {
       setSuggestedCategories([]);
       setSuggestedTags([]);
       setCreator('');
+      setImageUrl('');
     }
   };
 
@@ -341,14 +336,17 @@ export default function TabTwoScreen() {
       <ThemedView style={styles.sectionContainer}>
         <ThemedText type="subtitle" style={styles.subtitle}>Or Enter Details Manually</ThemedText>
 
-        <ThemedText style={styles.label}>Title</ThemedText>
-        <TextInput
-          style={[styles.input, styles.textInput]}
-          value={title}
-          onChangeText={setTitle}
-          placeholder="E.g., Amazing Recipe Idea"
-          placeholderTextColor="#888"
-        />
+        {imageUrl && <View style={styles.imageContainer}>
+          <Image
+            source={{ uri: imageUrl }} // The `source` prop takes an object with a `uri` key
+            style={styles.image}
+            resizeMode="contain" // Or "cover", "stretch", "center", "repeat"
+            // Optional: Add a loading indicator while the image loads
+            onLoadStart={() => console.log('[Image] Loading started...')}
+            onLoadEnd={() => console.log('[Image] Loading finished.')}
+            onError={(error) => console.error('[Image] Error loading image:', error.nativeEvent.error)}
+          />
+        </View>}
 
         <ThemedText style={styles.label}>Source URL (Optional)</ThemedText>
         <TextInput
@@ -479,5 +477,16 @@ const styles = StyleSheet.create({
   submitError: {
     color: 'red',
     marginVertical: 10
-  }
+  },
+  imageContainer: {
+    marginTop: 20,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  image: {
+    width: 300,
+    height: 200,
+    borderRadius: 8,
+    backgroundColor: '#e0e0e0',
+  },
 });
