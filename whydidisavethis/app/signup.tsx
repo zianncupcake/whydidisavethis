@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -12,26 +12,21 @@ import {
 import { Ionicons } from '@expo/vector-icons'; // For password visibility icons
 import { Link, useRouter } from 'expo-router'; // For navigation
 
-import { AuthContext } from "@/utils/authContext"; // Using your specified path
+import { useAuth } from "@/utils/authContext"; // Using your specified path
 
 export default function SignupScreen() {
-    const authContext = useContext(AuthContext);
-    const router = useRouter(); // For navigation if needed (e.g. after successful signup alert)
+    const {
+        signUp,
+        isLoadingAction,
+        actionError,
+    } = useAuth();
+    const router = useRouter();
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-    if (!authContext) {
-        console.error("AuthContext is undefined in SignupScreen. Make sure it's wrapped by AuthProvider.");
-        return (
-            <View style={styles.container}>
-                <Text style={styles.errorText}>Error: AuthProvider not found.</Text>
-            </View>
-        );
-    }
 
     const handleSignup = async () => {
         if (!username.trim() || !password.trim() || !confirmPassword.trim()) {
@@ -44,7 +39,7 @@ export default function SignupScreen() {
         }
 
         // Call the signUp function from the context
-        const signupSuccessful = await authContext.signUp(username, password);
+        const signupSuccessful = await signUp(username, password);
 
         if (signupSuccessful) {
             // AuthProvider's signUp might already handle navigation or show an alert.
@@ -115,17 +110,17 @@ export default function SignupScreen() {
                 </TouchableOpacity>
             </View>
 
-            {authContext.actionError && (
-                <Text style={styles.errorText}>{authContext.actionError}</Text>
+            {actionError && (
+                <Text style={styles.errorText}>{actionError}</Text>
             )}
 
-            {authContext.isLoadingAction ? (
+            {isLoadingAction ? (
                 <ActivityIndicator size="large" color="#007bff" style={styles.loader} />
             ) : (
                 <Button title="Sign Up" onPress={handleSignup} />
             )}
 
-            <Link href="/login" asChild style={styles.linkContainer} disabled={authContext.isLoadingAction}>
+            <Link href="/login" asChild style={styles.linkContainer} disabled={isLoadingAction}>
                 <TouchableOpacity>
                     <Text style={styles.linkText}>Already have an account? Log In</Text>
                 </TouchableOpacity>
@@ -134,7 +129,6 @@ export default function SignupScreen() {
     );
 }
 
-// Using the same styles as your LoginScreen for consistency
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -149,7 +143,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         color: '#1A202C',
     },
-    input: { // Used for username input
+    input: {
         height: 50,
         borderColor: '#CBD5E0',
         borderWidth: 1,
