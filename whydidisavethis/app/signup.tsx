@@ -9,10 +9,10 @@ import {
     Alert,
     TouchableOpacity,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons'; // For password visibility icons
-import { Link, useRouter } from 'expo-router'; // For navigation
+import { Ionicons } from '@expo/vector-icons';
+import { Link, useRouter } from 'expo-router';
 
-import { useAuth } from "@/utils/authContext"; // Using your specified path
+import { useAuth } from "@/utils/authContext";
 
 export default function SignupScreen() {
     const {

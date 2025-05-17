@@ -1,12 +1,16 @@
 
 import { Button, View, Text, StyleSheet, TextInput, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AuthContext } from "@/utils/authContext";
-import { useContext, useState } from "react";
+import { useState } from "react";
 import { Link } from 'expo-router';
+import { useAuth } from "@/utils/authContext";
 
 export default function LoginScreen() {
-    const authContext = useContext(AuthContext);
+    const {
+        logIn,
+        isLoadingAction,
+        actionError,
+    } = useAuth();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -16,7 +20,7 @@ export default function LoginScreen() {
             Alert.alert("Input Required", "Please enter both username and password.");
             return;
         }
-        const loginSuccessful = await authContext.logIn(username, password);
+        const loginSuccessful = await logIn(username, password);
 
         if (loginSuccessful) {
             setUsername('');
@@ -61,17 +65,17 @@ export default function LoginScreen() {
                 </TouchableOpacity>
             </View>
 
-            {authContext.actionError && (
-                <Text style={styles.errorText}>{authContext.actionError}</Text>
+            {actionError && (
+                <Text style={styles.errorText}>{actionError}</Text>
             )}
 
-            {authContext.isLoadingAction ? (
+            {isLoadingAction ? (
                 <ActivityIndicator size="large" color="#007bff" style={styles.loader} />
             ) : (
                 <Button title="Login" onPress={handleLogin} />
             )}
 
-            <Link href="/signup" asChild style={styles.linkContainer} disabled={authContext.isLoadingAction}>
+            <Link href="/signup" asChild style={styles.linkContainer} disabled={isLoadingAction}>
                 <TouchableOpacity>
                     <Text style={styles.linkText}>Don&apos;t have an account? Sign Up</Text>
                 </TouchableOpacity>
