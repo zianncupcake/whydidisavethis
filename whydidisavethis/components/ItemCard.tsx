@@ -97,14 +97,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderRadius: 10,
         overflow: 'hidden',
-        // margin will be handled by the FlatList item wrapper for grid layout
-        // width will be determined by the FlatList item wrapper
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 3.84,
         elevation: 5,
-        flex: 1, // Make card take up space given by its wrapper
+        flex: 1,
     },
     cardImage: {
         width: '100%',
@@ -121,57 +119,14 @@ const styles = StyleSheet.create({
     },
     cardContent: {
         padding: 12, // Reduced padding slightly for smaller cards
-    },
-    cardTitle: {
-        fontSize: 15, // Slightly smaller for grid view
-        fontWeight: 'bold',
-        marginBottom: 4,
-        color: '#0366d6',
+        flex: 1,
+        height: 80
     },
     cardDescription: {
         fontSize: 12,
         color: '#586069',
         marginBottom: 6,
         lineHeight: 16,
-    },
-    cardCreator: {
-        fontSize: 11,
-        fontStyle: 'italic',
-        color: '#6a737d',
-        marginBottom: 6,
-    },
-    cardSourceUrlLabel: {
-        fontSize: 12,
-        color: '#24292e',
-        marginBottom: 6,
-    },
-    cardSourceUrl: {
-        color: '#007bff',
-        textDecorationLine: 'underline',
-    },
-    tagsContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        marginBottom: 4,
-    },
-    tagsLabel: {
-        fontSize: 12,
-        color: '#24292e',
-        marginRight: 4,
-        fontWeight: '500',
-    },
-    tag: {
-        backgroundColor: '#eef4ff',
-        borderRadius: 4,
-        paddingVertical: 2,
-        paddingHorizontal: 6,
-        marginRight: 4,
-        marginBottom: 4,
-    },
-    tagText: {
-        fontSize: 11,
-        color: '#0052cc',
     },
 });
 
