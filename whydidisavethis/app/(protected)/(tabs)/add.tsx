@@ -6,7 +6,7 @@ import Constants from 'expo-constants';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import PillInput from '@/components/PillInput';
 import { useAuth } from '@/utils/authContext';
-import { apiService, ApiServiceError, ItemCreatePayload, ItemResponse } from '@/lib/apiService';
+import { apiService, ApiServiceError, Item, ItemCreatePayload } from '@/lib/apiService';
 
 export default function TabTwoScreen() {
   const { user } = useAuth();
@@ -276,7 +276,7 @@ export default function TabTwoScreen() {
     setSubmitError(null);
 
     try {
-      const createdItem: ItemResponse = await apiService.addItem(postData);
+      const createdItem: Item = await apiService.addItem(postData);
       console.log('Item created successfully:', createdItem);
       Alert.alert('Success!', 'Item added successfully.');
 

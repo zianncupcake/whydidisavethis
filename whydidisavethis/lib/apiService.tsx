@@ -1,3 +1,4 @@
+import { User } from '@/utils/authContext';
 import axios, { AxiosError } from 'axios';
 import Constants from 'expo-constants';
 
@@ -22,10 +23,10 @@ interface LoginResponse {
     token_type: string;
 }
 
-interface UserResponse {
-    id: number;
-    username: string;
-}
+// interface UserResponse {
+//     id: number;
+//     username: string;
+// }
 export interface ItemCreatePayload {
     user_id: number;
     source_url?: string;
@@ -35,7 +36,7 @@ export interface ItemCreatePayload {
     creator?: string;
     image_url?: string;
 }
-export interface ItemResponse {
+export interface Item {
     id: number;
     user_id: number;
     source_url?: string | null;
@@ -103,12 +104,12 @@ export const apiService = {
         }
     },
 
-    signup: async (username_req: string, password_req: string): Promise<UserResponse> => {
+    signup: async (username_req: string, password_req: string): Promise<User> => {
         const endpoint = `/users/`;
         console.log(`[apiService] axios signup: Calling ${API_BASE_URL}${endpoint}`);
 
         try {
-            const response = await apiClient.post<UserResponse>(endpoint, {
+            const response = await apiClient.post<User>(endpoint, {
                 username: username_req,
                 password: password_req,
             }, {
@@ -137,11 +138,11 @@ export const apiService = {
         }
     },
 
-    getUserFromToken: async (token: string): Promise<UserResponse> => {
+    getUserFromToken: async (token: string): Promise<User> => {
         const endpoint = `/users/me`;
         console.log(`[apiService] axios getMyProfile: Calling ${API_BASE_URL}${endpoint}`);
         try {
-            const response = await apiClient.get<UserResponse>(endpoint, {
+            const response = await apiClient.get<User>(endpoint, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
@@ -160,12 +161,12 @@ export const apiService = {
         }
     },
 
-    addItem: async (itemData: ItemCreatePayload): Promise<ItemResponse> => {
+    addItem: async (itemData: ItemCreatePayload): Promise<Item> => {
         const endpoint = `/items/`;
         console.log(`[apiService] axios addItem: Calling ${API_BASE_URL}${endpoint}`);
 
         try {
-            const response = await apiClient.post<ItemResponse>(endpoint, itemData, {
+            const response = await apiClient.post<Item>(endpoint, itemData, {
                 headers: {
                     'Content-Type': 'application/json',
                 },

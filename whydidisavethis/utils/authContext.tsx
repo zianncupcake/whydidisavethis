@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SplashScreen, useRouter } from "expo-router";
 import React, { createContext, PropsWithChildren, useEffect, useState, useContext, useMemo } from "react";
-import { apiService } from "../lib/apiService";
+import { apiService, Item } from "../lib/apiService";
 import { Alert } from "react-native";
 
 SplashScreen.preventAutoHideAsync();
@@ -9,6 +9,7 @@ SplashScreen.preventAutoHideAsync();
 export interface User {
     id: number;
     username: string;
+    items: Item[]
 }
 
 type AuthState = {

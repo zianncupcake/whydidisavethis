@@ -1,75 +1,79 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import React from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+  Dimensions,
+  Platform
+} from 'react-native';
+import { useAuth } from '@/utils/authContext';
+import ItemCard from '@/components/ItemCard'; // Import ItemCard and ItemType
+import { Item } from '@/lib/apiService';
 
 export default function HomeScreen() {
+  const { user } = useAuth();
+
+  if (!user?.items || user.items.length === 0) {
+    return (
+      <View style={styles.centered}>
+        <Text>You haven&apos;t added any items yet!</Text>
+      </View>
+    );
+  }
+
+  // Calculate card width for numColumns layout here, in the screen component
+  const numColumns = 2;
+  const screenPadding = 16;
+  const cardMargin = 8; // This should match the margin in ItemCard styles
+  const cardWidth = (Dimensions.get('window').width - (screenPadding * 2) - (cardMargin * numColumns * 2) + (cardMargin * numColumns)) / numColumns;
+  // A simpler calculation if margin is applied outside by columnWrapperStyle or FlatList's contentContainerStyle
+  // const cardWidth = (Dimensions.get('window').width / numColumns) - (screenPadding); // Adjust based on how you space items
+
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      {/* <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it fdjbviejrbviuerbiub</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView> */}
-    </ParallaxScrollView>
+    <View style={styles.screenContainer}>
+      <FlatList
+        data={user.items as Item[]} // Assert type if user.items might not match ItemType exactly
+        renderItem={({ item }) => (
+          <View style={{ width: cardWidth, marginHorizontal: cardMargin / 2 }}>
+            {/* This wrapper View helps manage width and spacing for numColumns */}
+            <ItemCard item={item} />
+          </View>
+        )}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={numColumns}
+        contentContainerStyle={styles.listContentContainer}
+      // columnWrapperStyle={styles.row} // Use if you need specific styles for the row wrapper
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  screenContainer: {
+    flex: 1,
+    backgroundColor: '#f0f2f5',
+    paddingTop: Platform.OS === 'ios' ? 80 : 10,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    padding: 20,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginVertical: 20,
+    color: '#1A202C',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  listContentContainer: {
+    paddingHorizontal: 8, // Adjust based on card margin and desired screen padding
   },
+  // row: { // If using columnWrapperStyle
+  //   justifyContent: 'space-around',
+  // },
 });

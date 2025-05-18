@@ -25,6 +25,14 @@ export default function ProtectedLayout() {
         name="(tabs)"
         options={{
           headerShown: false,
+          title: 'My saves',
+        }}
+      />
+      <Stack.Screen
+        name="item/[id]"
+        options={{
+          headerShown: true,
+          title: 'Post Details',
         }}
       />
     </Stack>
