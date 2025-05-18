@@ -192,6 +192,61 @@ export const apiService = {
         }
     },
 
+    fetchUserItems: async (userId: number): Promise<Item[]> => {
+        // Adjust endpoint to your actual API endpoint for fetching items
+        const endpoint = `/users/${userId}/items`; // Example endpoint
+        try {
+            const response = await apiClient.get<Item[]>(endpoint); // Expects an array of Item
+            console.log("[apiService] axios fetchUserItems: Success", response.data);
+            return response.data;
+        } catch (error) {
+            const axiosError = error as AxiosError<ApiErrorData>;
+            const errorResponseData = axiosError.response?.data;
+            const status = axiosError.response?.status;
+            let errorMessage = axiosError.message || 'An unexpected error occurred while fetching items.';
+            console.error("[apiService] axios fetchUserItems: Error", errorResponseData || axiosError.message);
+            if (errorResponseData?.detail) {
+                if (typeof errorResponseData.detail === 'string') {
+                    errorMessage = errorResponseData.detail;
+                } else if (Array.isArray(errorResponseData.detail) && errorResponseData.detail.length > 0) {
+                    errorMessage = errorResponseData.detail.map(e => e.msg || String(e)).join(', ');
+                }
+            }
+            throw new ApiServiceError(errorMessage, status, errorResponseData);
+        }
+    },
+
+    fetchItem: async (itemId: number): Promise<Item> => {
+        const endpoint = `/items/${itemId}`;
+        console.log(`[apiService] axios getItemById: Calling ${API_BASE_URL}${endpoint}`);
+        try {
+            const response = await apiClient.get<Item>(endpoint, {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            console.log("[apiService] axios getItemById: Success", response.data);
+            return response.data;
+        } catch (error) {
+            const axiosError = error as AxiosError<ApiErrorData>;
+            const errorResponseData = axiosError.response?.data;
+            const status = axiosError.response?.status;
+            let errorMessage = axiosError.message || `Failed to fetch item with ID ${itemId}.`;
+            console.error("[apiService] axios getItemById: Error", errorResponseData || axiosError.message);
+
+            if (status === 404) {
+                errorMessage = "Item not found.";
+            } else if (errorResponseData?.detail) {
+                if (typeof errorResponseData.detail === 'string') {
+                    errorMessage = errorResponseData.detail;
+                } else if (Array.isArray(errorResponseData.detail) && errorResponseData.detail.length > 0) {
+                    errorMessage = errorResponseData.detail.map(e => e.msg || String(e)).join(', ');
+                }
+            }
+            throw new ApiServiceError(errorMessage, status, errorResponseData);
+        }
+    },
+
     // Example of using an interceptor to add auth token to requests
     // This would typically be set up once when apiClient is created or when token is available
     setupAuthInterceptor: (token: string | null) => {

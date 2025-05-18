@@ -1,55 +1,78 @@
-// app/(tabs)/item/[id].tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, ActivityIndicator, Linking, TouchableOpacity, Platform } from 'react-native';
-import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
+import {
+    View,
+    Text,
+    Image,
+    StyleSheet,
+    ScrollView,
+    ActivityIndicator,
+    Linking,
+    TouchableOpacity,
+    Button,
+} from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from "@/utils/authContext";
-import { Item } from '@/lib/apiService';
+import { Item, apiService, ApiServiceError } from '@/lib/apiService';
 
 export default function ItemDetailScreen() {
-    const { id } = useLocalSearchParams<{ id: string }>(); // Get the 'id' param from the URL
-    const { user } = useAuth(); // Get the full user object which might contain all items
+    const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
 
-    const [item, setItem] = useState<Item | null | undefined>(undefined); // undefined: loading, null: not found
+    const [item, setItem] = useState<Item | null>(null); // Item can be null if not found or error
+    const [isLoadingDetail, setIsLoadingDetail] = useState(true);
+    const [fetchError, setFetchError] = useState<string | null>(null);
+
+    const renderCount = React.useRef(0);
+    renderCount.current += 1;
 
     useEffect(() => {
-        if (user && user.items && id) {
-            const foundItem = user.items.find(i => i.id.toString() === id);
-            setItem(foundItem); // Set to null if not found
-        } else if (user && !user.items && id) {
-            // If user object doesn't contain items, you might need to fetch the specific item by ID
-            // console.log(`Item with ID ${id} not found in local user.items. Consider fetching from API.`);
-            // Example: apiService.getItemById(id).then(setItem).catch(() => setItem(null));
-            setItem(null); // Placeholder for not found if not fetching individually
-        }
-    }, [user, id]);
+        const fetchItemDetails = async () => {
+            setIsLoadingDetail(true);
+            setFetchError(null);
+            setItem(null);
 
-    //   // Dynamically set the header title for this screen
-    //   // This is one way; another is configuring it in the _layout.tsx if simpler
-    //   useEffect(() => {
-    //     if (item?.title) {
-    //       // Note: For Expo Router v3+, direct navigation.setOptions might be different.
-    //       // This usually works if this screen is directly managed by a Stack navigator
-    //       // from a parent _layout. For a simple title, using options in _layout is often cleaner.
-    //       // For dynamic routes, you can also export 'options' from this file.
-    //       // For now, let's assume the title can be set in the parent layout or you handle it manually.
-    //     }
-    //   }, [item, router]);
+            try {
+                const fetchedItem = await apiService.fetchItem(parseInt(id));
+                setItem(fetchedItem);
+            } catch (error) {
+                console.error("[ItemDetailScreen] Failed to fetch item details:", error);
+                const errorMessage = error instanceof ApiServiceError ? error.message : (error instanceof Error ? error.message : "An unknown error occurred.");
+                setFetchError(errorMessage);
+                setItem(null);
+            } finally {
+                setIsLoadingDetail(false);
+            }
+        };
+
+        fetchItemDetails();
+
+    }, [id]);
 
 
-    if (item === undefined) { // Still loading/determining item
+    if (isLoadingDetail) {
         return (
             <View style={styles.centered}>
                 <ActivityIndicator size="large" />
+                <Text>Loading item details...</Text>
             </View>
         );
     }
 
-    if (item === null) {
+    if (fetchError) {
+        return (
+            <View style={styles.centered}>
+                <Text style={styles.errorText}>Error: {fetchError}</Text>
+                <Button title="Go Back" onPress={() => router.back()} />
+                {/* You could add a retry button here if appropriate */}
+            </View>
+        );
+    }
+
+    if (!item) {
         return (
             <View style={styles.centered}>
                 <Text>Item not found.</Text>
+                <Button title="Go Back" onPress={() => router.back()} />
             </View>
         );
     }
@@ -62,8 +85,6 @@ export default function ItemDetailScreen() {
 
     return (
         <ScrollView style={styles.screenContainer}>
-            {/* Optional: Add a custom header or use Stack.Screen options in layout */}
-            {/* <Stack.Screen options={{ title: item.title || 'Item Details' }} /> */}
 
             {item.image_url && (
                 <Image source={{ uri: item.image_url }} style={styles.image} resizeMode="cover" />
@@ -124,19 +145,20 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        padding: 20,
     },
     image: {
         width: '100%',
-        height: 350, // Larger image for detail view
+        height: 300, // Adjusted height for detail view
         backgroundColor: '#e0e0e0',
     },
     contentContainer: {
         padding: 20,
     },
-    title: {
+    titleInBody: { // If you want to display the title in the body as well
         fontSize: 24,
         fontWeight: 'bold',
-        marginBottom: 8,
+        marginBottom: 12,
         color: '#1A202C',
     },
     creator: {
@@ -161,7 +183,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#007bff',
         marginLeft: 8,
-        // textDecorationLine: 'underline', // Handled by link appearance
     },
     metaSection: {
         marginBottom: 16,
@@ -179,7 +200,7 @@ const styles = StyleSheet.create({
     },
     tag: {
         backgroundColor: '#eef4ff',
-        borderRadius: 16, // More pill-like
+        borderRadius: 16,
         paddingVertical: 5,
         paddingHorizontal: 12,
         marginRight: 8,
@@ -189,4 +210,10 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: '#0052cc',
     },
+    errorText: { // Added for displaying fetchError
+        color: 'red',
+        fontSize: 16,
+        textAlign: 'center',
+        marginBottom: 10,
+    }
 });
