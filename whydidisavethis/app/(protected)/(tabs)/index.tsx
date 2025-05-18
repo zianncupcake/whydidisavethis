@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   Dimensions,
   Platform,
-  RefreshControl,
   Button,
 } from 'react-native';
 
@@ -16,74 +15,61 @@ import ItemCard from '@/components/ItemCard';
 import { Item, apiService } from '@/lib/apiService';
 import { useFocusEffect } from 'expo-router';
 
-const NUM_COLUMNS = 2; // For 2 cards per row
+const NUM_COLUMNS = 2;
 const CARD_MARGIN = 8;
 
 export default function HomeScreen() {
-  const { user } = useAuth();
+  const { user } = useAuth(); // User object from context
 
   const [items, setItems] = useState<Item[]>([]);
-  const [isLoadingItems, setIsLoadingItems] = useState(true);
+  const [isLoadingItems, setIsLoadingItems] = useState(true); // For item fetching
 
-  // Calculate card width (keeping your 2-column grid logic)
   const screenWidth = Dimensions.get('window').width;
-  const listHorizontalPadding = (styles.listContentContainer.paddingHorizontal || 0) * 2;
+  // Ensure styles.listContentContainer.paddingHorizontal is defined if used here
+  const listHorizontalPadding = ((styles.listContentContainer && styles.listContentContainer.paddingHorizontal) || 0) * 2;
   const cardWidth = (screenWidth - listHorizontalPadding) / NUM_COLUMNS - CARD_MARGIN;
 
-  const loadItems = useCallback(async (isPullToRefresh = false) => {
+  const loadItems = useCallback(async () => {
+    // Check if user and user.id are available.
+    // Your API call apiService.fetchUserItems(user.id) requires user.id.
     if (!user?.id) {
       console.log("[HomeScreen] User ID not available, cannot load items.");
-      if (!isPullToRefresh) setIsLoadingItems(false);
+      setIsLoadingItems(false); // Stop loading if no user/token
       setItems([]);
       return;
     }
 
     console.log("[HomeScreen] Loading items...");
-    if (!isPullToRefresh) {
-      setIsLoadingItems(true);
-    }
+    setIsLoadingItems(true); // Set loading true for any fetch attempt
 
     try {
-      // Assuming fetchUserItems uses the token (backend infers user from token)
       const fetchedItems = await apiService.fetchUserItems(user.id);
-      // If your apiService.fetchUserItems needed user.id:
-      // const fetchedItems = await apiService.fetchUserItems(user.id, token);
       setItems(fetchedItems);
     } catch (error) {
       console.error("[HomeScreen] Failed to fetch items:", error);
       setItems([]); // Clear items on error
     } finally {
-      // Only set main loading to false if it wasn't a pull-to-refresh
-      // The RefreshControl has its own spinner.
-      if (!isPullToRefresh) {
-        setIsLoadingItems(false);
-      }
+      setIsLoadingItems(false); // Always set loading to false after attempt
     }
-  }, [user]); // Add user if user.id is needed by loadItems
+  }, [user]); // Dependency is user (specifically user.id for the API call)
 
-  // useEffect to load items when the component mounts or token/user changes
-  useEffect(() => {
-    if (user) { // Only load if user is present
-      loadItems();
-    } else {
-      // If no token, ensure items are cleared (e.g., after logout and screen is still somehow visible before redirect)
-      setItems([]);
-      setIsLoadingItems(false); // Ensure loading stops if there was no token to begin with
-    }
-  }, [user, loadItems]); // `loadItems` is memoized and depends on `token` (and `user` if needed)
-
+  // Use useFocusEffect to load items when the screen comes into focus
+  // This also handles the initial load when the screen first mounts and focuses.
   useFocusEffect(
     useCallback(() => {
-      console.log("[HomeScreen] Screen focused, fetching items.");
-      if (user) {
+      console.log("[HomeScreen] Screen focused, user:", user ? user.id : 'no user');
+      if (user?.id) { // Check if user and user.id exist before loading
         loadItems();
+      } else {
+        // If no user.id (e.g., user logged out, or auth still loading), clear items.
+        // This case should ideally be handled by RootLayout redirecting if !isAuthenticated.
+        setItems([]);
+        setIsLoadingItems(false); // Ensure loading state is false if no user/token
       }
-      // Optional: Return a cleanup function if needed
-      // return () => console.log("[HomeScreen] Screen unfocused");
-    }, [loadItems, user]) // Dependencies of the effect
+    }, [user, loadItems]) // Dependencies for the focus effect
   );
 
-  // Initial loading state for the items for this screen
+  // If isLoadingItems is true AND there are no items yet (initial load)
   if (isLoadingItems && items.length === 0) {
     return (
       <View style={styles.centered}>
@@ -99,8 +85,7 @@ export default function HomeScreen() {
       <View style={styles.centered}>
         <Text>You haven&apos;t added any items yet!</Text>
         <View style={{ marginTop: 20 }}>
-          {/* Pull-to-refresh will also work, but a button is good for explicit action */}
-          <Button title="Refresh Items" onPress={() => loadItems(true)} disabled={isLoadingItems} />
+          <Button title="Refresh Items" onPress={loadItems} disabled={isLoadingItems} />
         </View>
       </View>
     );
@@ -120,12 +105,7 @@ export default function HomeScreen() {
         keyExtractor={(item) => item.id.toString()}
         numColumns={NUM_COLUMNS}
         contentContainerStyle={styles.listContentContainer}
-        refreshControl={
-          <RefreshControl
-            refreshing={isLoadingItems} // Show spinner when loadItems(true) is running
-            onRefresh={() => loadItems(true)} // Pass true to indicate it's a refresh action
-          />
-        }
+      // refreshControl prop is now removed
       />
     </View>
   );
@@ -135,8 +115,7 @@ const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
     backgroundColor: '#f0f2f5',
-    // Add paddingTop here if this screen doesn't get a header from a navigator
-    paddingTop: Platform.OS === 'ios' ? 60 : 10,
+    paddingTop: Platform.OS === 'ios' ? 60 : 10, // Keep if needed for status bar
   },
   centered: {
     flex: 1,
@@ -144,22 +123,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  // headerTitle: { // If you want an in-page title
-  //   fontSize: 24,
-  //   fontWeight: 'bold',
-  //   textAlign: 'center',
-  //   marginVertical: 10, // Adjust as needed if using paddingTop on screenContainer
-  //   paddingTop: Platform.OS === 'ios' ? 20 : 0, // Adjust if this Text is the very first element
-  //   color: '#1A202C',
-  // },
   listContentContainer: {
-    paddingHorizontal: CARD_MARGIN / 2 + 8, // e.g., 4 for item margin + 8 for overall list padding
-    paddingTop: CARD_MARGIN, // Add some padding at the top of the list
-    paddingBottom: 80, // For space above tab bar
+    paddingHorizontal: CARD_MARGIN / 2 + 8,
+    paddingTop: CARD_MARGIN,
+    paddingBottom: 100, // For space above tab bar
   },
-  // errorText: { // Removed as per "no need fetch error" for UI
-  //   color: 'red',
-  //   marginBottom: 10,
-  //   textAlign: 'center',
-  // }
 });

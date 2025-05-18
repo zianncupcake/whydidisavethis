@@ -41,7 +41,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "backendEndpoint": "https://myfoods-backend-817cd60e47a9.herokuapp.com"
+      "backendEndpoint": "http://127.0.0.1:8000"
     }
   }
 }
