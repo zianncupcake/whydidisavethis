@@ -1,7 +1,5 @@
 import { Platform, StyleSheet, TextInput, Button, Alert, View, ScrollView, ActivityIndicator, Text, Image } from 'react-native';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
 import Constants from 'expo-constants';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import PillInput from '@/components/PillInput';
@@ -317,8 +315,8 @@ export default function TabTwoScreen() {
       keyboardShouldPersistTaps="handled"
     >
       {/* Autofill Section */}
-      <ThemedView style={styles.sectionContainer}>
-        <ThemedText type="subtitle" style={styles.subtitle}>Autofill from Social Media</ThemedText>
+      <View style={styles.sectionContainer}>
+        <Text style={styles.subtitle}>Autofill from Social Media</Text>
         <TextInput
           style={[styles.input, styles.textInput]}
           placeholder="Paste Instagram or TikTok link hereeee"
@@ -332,11 +330,11 @@ export default function TabTwoScreen() {
         <View style={styles.buttonContainer}>
           <Button title="Autofill with Link" onPress={handleAutofillButtonPressed} color={Platform.OS === 'ios' ? '#007AFF' : undefined} />
         </View>
-      </ThemedView>
+      </View>
 
       {/* Manual Form Entry Section */}
-      <ThemedView style={styles.sectionContainer}>
-        <ThemedText type="subtitle" style={styles.subtitle}>Or Enter Details Manually</ThemedText>
+      <View style={styles.sectionContainer}>
+        <Text style={styles.subtitle}>Or Enter Details Manually</Text>
 
         {imageUrl && <View style={styles.imageContainer}>
           <Image
@@ -350,7 +348,7 @@ export default function TabTwoScreen() {
           />
         </View>}
 
-        <ThemedText style={styles.label}>Source URL (Optional)</ThemedText>
+        <Text style={styles.label}>Source URL (Optional)</Text>
         <TextInput
           style={[styles.input, styles.textInput]}
           value={sourceUrl}
@@ -361,7 +359,7 @@ export default function TabTwoScreen() {
           autoCapitalize="none"
         />
 
-        <ThemedText style={styles.label}>Notes (Optional)</ThemedText>
+        <Text style={styles.label}>Notes (Optional)</Text>
         <TextInput
           style={[styles.input, styles.textInput, styles.multilineInput]}
           value={notes}
@@ -392,7 +390,7 @@ export default function TabTwoScreen() {
           editable={!isLoading}
         />
 
-        <ThemedText style={styles.label}>Creator (Optional)</ThemedText>
+        <Text style={styles.label}>Creator (Optional)</Text>
         <TextInput
           style={[styles.input, styles.textInput]}
           value={creator}
@@ -410,7 +408,7 @@ export default function TabTwoScreen() {
             <Button title="Save Post" onPress={handleSubmit} />
           )}
         </View>
-      </ThemedView>
+      </View>
     </ScrollView>
   );
 }
@@ -454,6 +452,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     fontSize: 16,
     marginBottom: 12,
+    backgroundColor: '#FFFFFF',
     // color: '#000', // Text color should ideally come from theme or be adaptable
   },
   textInput: { // Specific style for TextInput to allow ThemedText for labels
@@ -461,8 +460,6 @@ const styles = StyleSheet.create({
     // For now, assuming standard TextInput, so color needs to be managed
     // This will be tricky with light/dark themes without a ThemedTextInput
     // For a quick fix, you might set a general color or use Platform.select
-    color: Platform.OS === 'ios' ? '#000000' : '#000000', // Placeholder, ideally theme-aware
-    backgroundColor: Platform.OS === 'ios' ? '#FFFFFF' : '#FFFFFF', // Placeholder
   },
   multilineInput: {
     height: 200,

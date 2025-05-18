@@ -37,15 +37,15 @@ export default function LoginScreen() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Login Screen</Text>
+            <Text style={styles.title}>Login</Text>
             <TextInput
                 style={styles.input}
                 placeholder="Username"
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
-                autoComplete="username"
                 keyboardType="email-address"
+                placeholderTextColor="#8e8e93"
             />
             <View style={styles.passwordContainer}>
                 <TextInput
@@ -54,7 +54,8 @@ export default function LoginScreen() {
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
-                    autoComplete="password"
+                    autoCapitalize="none"
+                    placeholderTextColor="#8e8e93"
                 />
                 <TouchableOpacity onPress={toggleShowPassword} style={styles.eyeIcon}>
                     <Ionicons

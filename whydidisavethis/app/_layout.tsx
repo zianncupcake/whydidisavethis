@@ -6,7 +6,7 @@ import { AuthProvider } from "@/utils/authContext";
 export default function RootLayout() {
     return (
         <AuthProvider>
-            <StatusBar style="auto" />
+            <StatusBar style="dark" />
             <Stack>
                 <Stack.Screen
                     name="(protected)"

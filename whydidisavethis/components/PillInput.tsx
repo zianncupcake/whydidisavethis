@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
-import { ThemedText } from './ThemedText';
+import { View, TextInput, TouchableOpacity, ScrollView, StyleSheet, Text } from 'react-native';
 
 type PillInputProps = {
     label: string;
@@ -46,7 +45,7 @@ const PillInput: React.FC<PillInputProps> = ({
 
     return (
         <View style={styles.pillInputWrapper}>
-            <ThemedText style={styles.label}>{label}</ThemedText>
+            <Text style={styles.label}>{label}</Text>
             <View style={styles.textInputContainer}>
                 <TextInput
                     style={[styles.input, styles.textInputTheme, styles.pillTextInputStyle]}
@@ -67,10 +66,10 @@ const PillInput: React.FC<PillInputProps> = ({
                 >
                     {selectedItems.map((item, index) => (
                         <View key={`selected-${label.toLowerCase().replace(/\s+/g, '-')}-${item}-${index}`} style={styles.itemPill}>
-                            <ThemedText style={styles.itemText}>{item}</ThemedText>
+                            <Text style={styles.itemText}>{item}</Text>
                             {editable && (
                                 <TouchableOpacity onPress={() => handleRemoveItem(item)} style={styles.removeItemButton}>
-                                    <ThemedText style={styles.removeItemText}>✕</ThemedText>
+                                    <Text style={styles.removeItemText}>✕</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -80,7 +79,7 @@ const PillInput: React.FC<PillInputProps> = ({
 
             {suggestedItems.length > 0 && (
                 <View style={styles.suggestedItemsSection}>
-                    <ThemedText style={styles.suggestedItemsTitle}>Suggested (Tap to add):</ThemedText>
+                    <Text style={styles.suggestedItemsTitle}>Suggested (Tap to add):</Text>
                     <ScrollView
                         horizontal={false}
                         contentContainerStyle={styles.itemsContainer}
@@ -93,7 +92,7 @@ const PillInput: React.FC<PillInputProps> = ({
                                 style={styles.suggestedItemPill}
                                 disabled={!editable}
                             >
-                                <ThemedText style={styles.suggestedItemText}>{item}</ThemedText>
+                                <Text style={styles.suggestedItemText}>{item}</Text>
                             </TouchableOpacity>
                         ))}
                     </ScrollView>
@@ -121,10 +120,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         fontSize: 16,
         marginBottom: 12,
+        backgroundColor: '#FFFFFF',
     },
     textInputTheme: {
-        color: Platform.OS === 'ios' ? '#000000' : '#000000',
-        backgroundColor: Platform.OS === 'ios' ? '#FFFFFF' : '#FFFFFF',
     },
     pillTextInputStyle: {
         marginBottom: 8,

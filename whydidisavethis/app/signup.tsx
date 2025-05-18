@@ -73,7 +73,7 @@ export default function SignupScreen() {
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
-                autoComplete="username" // Use "username" for new username suggestion
+                placeholderTextColor="#8e8e93"
             />
             <View style={styles.passwordContainer}>
                 <TextInput
@@ -82,7 +82,8 @@ export default function SignupScreen() {
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
-                    autoComplete="new-password" // Hint for password managers
+                    autoCapitalize="none"
+                    placeholderTextColor="#8e8e93"
                 />
                 <TouchableOpacity onPress={toggleShowPassword} style={styles.eyeIcon}>
                     <Ionicons
@@ -99,7 +100,8 @@ export default function SignupScreen() {
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry={!showConfirmPassword}
-                    autoComplete="new-password"
+                    autoCapitalize="none"
+                    placeholderTextColor="#8e8e93"
                 />
                 <TouchableOpacity onPress={toggleShowConfirmPassword} style={styles.eyeIcon}>
                     <Ionicons
