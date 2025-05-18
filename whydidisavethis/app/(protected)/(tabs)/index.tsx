@@ -14,6 +14,7 @@ import {
 import { useAuth } from '@/utils/authContext';
 import ItemCard from '@/components/ItemCard';
 import { Item, apiService } from '@/lib/apiService';
+import { useFocusEffect } from 'expo-router';
 
 const NUM_COLUMNS = 2; // For 2 cards per row
 const CARD_MARGIN = 8;
@@ -70,6 +71,17 @@ export default function HomeScreen() {
       setIsLoadingItems(false); // Ensure loading stops if there was no token to begin with
     }
   }, [user, loadItems]); // `loadItems` is memoized and depends on `token` (and `user` if needed)
+
+  useFocusEffect(
+    useCallback(() => {
+      console.log("[HomeScreen] Screen focused, fetching items.");
+      if (user) {
+        loadItems();
+      }
+      // Optional: Return a cleanup function if needed
+      // return () => console.log("[HomeScreen] Screen unfocused");
+    }, [loadItems, user]) // Dependencies of the effect
+  );
 
   // Initial loading state for the items for this screen
   if (isLoadingItems && items.length === 0) {

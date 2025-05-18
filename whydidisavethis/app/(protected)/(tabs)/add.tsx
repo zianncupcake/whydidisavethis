@@ -280,6 +280,8 @@ export default function TabTwoScreen() {
       console.log('Item created successfully:', createdItem);
       Alert.alert('Success!', 'Item added successfully.');
 
+      router.replace('/');
+
       // Optionally navigate away or refresh a list
       // router.back(); or router.push('/items/' + createdItem.id);
 

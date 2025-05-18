@@ -1,4 +1,3 @@
-// components/ItemCard.tsx
 import { Item } from '@/lib/apiService';
 import { useRouter } from 'expo-router';
 import React from 'react';

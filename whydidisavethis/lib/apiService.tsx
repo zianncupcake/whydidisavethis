@@ -197,7 +197,7 @@ export const apiService = {
         const endpoint = `/users/${userId}/items`; // Example endpoint
         try {
             const response = await apiClient.get<Item[]>(endpoint); // Expects an array of Item
-            console.log("[apiService] axios fetchUserItems: Success", response.data);
+            // console.log("[apiService] axios fetchUserItems: Success", response.data);
             return response.data;
         } catch (error) {
             const axiosError = error as AxiosError<ApiErrorData>;
