@@ -138,6 +138,32 @@ export const apiService = {
         }
     },
 
+    deleteUser: async (user_id: number): Promise<void> => {
+        const endpoint = `/users/${user_id}`;
+        console.log(`[apiService] axios delete user: Calling ${API_BASE_URL}${endpoint}`);
+
+        try {
+            await apiClient.delete(endpoint)
+            // console.log("[apiService] axios delete user: Success", response.data);
+        } catch (error) {
+            const axiosError = error as AxiosError<ApiErrorData>;
+            console.error("[apiService] axios delete user: Error", axiosError.response?.data || axiosError.message);
+            let errorMessage = axiosError.message || 'An unexpected error occurred during delete user.';
+            const errorData = axiosError.response?.data;
+            const status = axiosError.response?.status;
+
+            if (errorData?.detail) {
+                // ... (same error detail parsing as login) ...
+                if (typeof errorData.detail === 'string') {
+                    errorMessage = errorData.detail;
+                } else if (Array.isArray(errorData.detail)) {
+                    errorMessage = errorData.detail.map(e => e.msg).join(', ');
+                }
+            }
+            throw new ApiServiceError(errorMessage, status, errorData);
+        }
+    },
+
     getUserFromToken: async (token: string): Promise<User> => {
         const endpoint = `/users/me`;
         console.log(`[apiService] axios getMyProfile: Calling ${API_BASE_URL}${endpoint}`);

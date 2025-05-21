@@ -13,10 +13,15 @@ export default function SettingsScreen() {
         logOut,
         isLoadingAction,
         actionError,
+        deleteUser
     } = useAuth();
 
     const handleLogout = async () => {
         await logOut();
+    };
+
+    const handleDeleteAccount = async () => {
+        await deleteUser();
     };
 
     return (
@@ -31,6 +36,10 @@ export default function SettingsScreen() {
 
             <View style={styles.section}>
                 <Button title="Log Out" onPress={handleLogout} color="#E53E3E" disabled={isLoadingAction} />
+            </View>
+
+            <View style={styles.section}>
+                <Button title="Delete Account" onPress={handleDeleteAccount} color="#E53E3E" disabled={isLoadingAction} />
             </View>
         </View>
     );

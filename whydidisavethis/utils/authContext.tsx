@@ -22,6 +22,7 @@ type AuthState = {
     logIn: (username_form: string, password_form: string) => Promise<boolean>;
     logOut: () => Promise<void>;
     signUp: (username_form: string, password_form: string) => Promise<boolean>;
+    deleteUser: () => Promise<void>;
 };
 
 const authStorageKey = "auth-key";
@@ -43,6 +44,9 @@ export const AuthContext = createContext<AuthState>({
     signUp: async () => {
         console.warn("Singup function not implemented in context default");
         return false;
+    },
+    deleteUser: async () => {
+        console.warn("DeleteUser function not implemented in context default");
     },
 });
 
@@ -171,6 +175,29 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
     };
 
+    const deleteUser = async () => {
+        console.log("[AuthProvider] deleteUser: deleting account.");
+        setIsLoadingAction(true); // Optional: loading state for logout
+        try {
+            if (user) {
+                await apiService.deleteUser(user.id)
+            }
+
+            await AsyncStorage.removeItem(authStorageKey);
+
+        } catch (error) {
+            console.error("[AuthProvider] logOut: Error removing token from storage", error);
+        } finally {
+            setToken(null);
+            setUser(null);
+            setIsLoggedIn(false);
+            setActionError(null);
+            setIsLoadingAction(false);
+            router.replace("/login");
+            console.log("[AuthProvider] logOut: Token removed. Navigated to /login.");
+        }
+    };
+
     // You no longer need the separate `storeAuthState` function
     // as token storage is handled within logIn and logOut.
 
@@ -184,7 +211,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
         actionError,
         logIn,
         logOut,
-        signUp
+        signUp,
+        deleteUser
     }), [isReady, isLoggedIn, token, isLoadingAction, actionError]);
 
     return (
