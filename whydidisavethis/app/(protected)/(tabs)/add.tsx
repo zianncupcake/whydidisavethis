@@ -204,7 +204,7 @@ export default function TabTwoScreen() {
       }
 
       if (data.task_id) {
-        Alert.alert('URL Submitted', `Processing started. Task ID: ${data.task_id}. Waiting for updates...`);
+        Alert.alert('URL Submitted', `Processing started, please wait`);
         setCurrentTaskId(data.task_id); // Set the new task ID
         connectWebSocket(data.task_id, urlToSubmit);
       } else {

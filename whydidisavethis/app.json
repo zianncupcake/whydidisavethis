@@ -41,7 +41,11 @@
       "typedRoutes": true
     },
     "extra": {
-      "backendEndpoint": "https://myfoods-backend-817cd60e47a9.herokuapp.com"
+      "backendEndpoint": "https://myfoods-backend-817cd60e47a9.herokuapp.com",
+      "router": {},
+      "eas": {
+        "projectId": "88ca1128-dc71-4932-b6c2-33e69c26d69b"
+      }
     }
   }
 }
