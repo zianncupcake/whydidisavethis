@@ -13,7 +13,7 @@ if (!API_BASE_URL) {
 // Create an Axios instance with a base URL and default headers if needed
 const apiClient = axios.create({
     baseURL: API_BASE_URL,
-    timeout: 10000, // e.g., 10 second timeout
+    timeout: 60000, // 60 second timeout (1 minute)
     // headers: { 'X-Custom-Header': 'foobar' } // Example global header
 });
 
@@ -84,7 +84,6 @@ export const apiService = {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
             });
-            console.log("[apiService] axios login: Success", response.data);
             return response.data;
         } catch (error) {
             const axiosError = error as AxiosError<ApiErrorData>;
@@ -144,7 +143,6 @@ export const apiService = {
 
         try {
             await apiClient.delete(endpoint)
-            // console.log("[apiService] axios delete user: Success", response.data);
         } catch (error) {
             const axiosError = error as AxiosError<ApiErrorData>;
             console.error("[apiService] axios delete user: Error", axiosError.response?.data || axiosError.message);
@@ -218,11 +216,19 @@ export const apiService = {
         }
     },
 
-    fetchUserItems: async (userId: number): Promise<Item[]> => {
+    fetchUserItems: async (userId: number, query?: string, offset: number = 0, limit: number = 20): Promise<Item[]> => {
         // Adjust endpoint to your actual API endpoint for fetching items
         const endpoint = `/users/${userId}/items`; // Example endpoint
         try {
-            const response = await apiClient.get<Item[]>(endpoint); // Expects an array of Item
+            const params: any = {
+                offset,
+                limit
+            };
+            if (query) {
+                params.query = query;
+            }
+            
+            const response = await apiClient.get<Item[]>(endpoint, { params }); // Expects an array of Item
             // console.log("[apiService] axios fetchUserItems: Success", response.data);
             return response.data;
         } catch (error) {
