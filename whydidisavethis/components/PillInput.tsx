@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, ScrollView, StyleSheet, Text } from 'react-native';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 type PillInputProps = {
     label: string;
@@ -21,6 +23,7 @@ const PillInput: React.FC<PillInputProps> = ({
     editable = true,
 }) => {
     const [currentInput, setCurrentInput] = useState('');
+    const colorScheme = useColorScheme();
 
     const handleAddItemFromInput = () => {
         const newItem = currentInput.trim();
@@ -45,14 +48,23 @@ const PillInput: React.FC<PillInputProps> = ({
 
     return (
         <View style={styles.pillInputWrapper}>
-            <Text style={styles.label}>{label}</Text>
+            <Text style={[styles.label, { color: Colors[colorScheme ?? 'light'].text }]}>{label}</Text>
             <View style={styles.textInputContainer}>
                 <TextInput
-                    style={[styles.input, styles.textInputTheme, styles.pillTextInputStyle]}
+                    style={[
+                        styles.input, 
+                        styles.textInputTheme, 
+                        styles.pillTextInputStyle,
+                        { 
+                            backgroundColor: Colors[colorScheme ?? 'light'].inputBackground,
+                            borderColor: Colors[colorScheme ?? 'light'].border,
+                            color: Colors[colorScheme ?? 'light'].text
+                        }
+                    ]}
                     value={currentInput}
                     onChangeText={setCurrentInput}
                     placeholder={placeholder}
-                    placeholderTextColor="#aaa"
+                    placeholderTextColor={Colors[colorScheme ?? 'light'].textMuted}
                     onSubmitEditing={handleAddItemFromInput}
                     editable={true}
                 />
@@ -65,11 +77,14 @@ const PillInput: React.FC<PillInputProps> = ({
                     keyboardShouldPersistTaps="handled"
                 >
                     {selectedItems.map((item, index) => (
-                        <View key={`selected-${label.toLowerCase().replace(/\s+/g, '-')}-${item}-${index}`} style={styles.itemPill}>
-                            <Text style={styles.itemText}>{item}</Text>
+                        <View 
+                            key={`selected-${label.toLowerCase().replace(/\s+/g, '-')}-${item}-${index}`} 
+                            style={[styles.itemPill, { backgroundColor: Colors[colorScheme ?? 'light'].tagBackground }]}
+                        >
+                            <Text style={[styles.itemText, { color: Colors[colorScheme ?? 'light'].primary }]}>{item}</Text>
                             {editable && (
                                 <TouchableOpacity onPress={() => handleRemoveItem(item)} style={styles.removeItemButton}>
-                                    <Text style={styles.removeItemText}>✕</Text>
+                                    <Text style={[styles.removeItemText, { color: Colors[colorScheme ?? 'light'].textSecondary }]}>✕</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -79,7 +94,7 @@ const PillInput: React.FC<PillInputProps> = ({
 
             {suggestedItems.length > 0 && (
                 <View style={styles.suggestedItemsSection}>
-                    <Text style={styles.suggestedItemsTitle}>Suggested (Tap to add):</Text>
+                    <Text style={[styles.suggestedItemsTitle, { color: Colors[colorScheme ?? 'light'].textSecondary }]}>Suggested (Tap to add):</Text>
                     <ScrollView
                         horizontal={false}
                         contentContainerStyle={styles.itemsContainer}
@@ -89,10 +104,16 @@ const PillInput: React.FC<PillInputProps> = ({
                             <TouchableOpacity
                                 key={`suggested-${label.toLowerCase().replace(/\s+/g, '-')}-${item}-${index}`}
                                 onPress={() => handleAddSuggestedItem(item)}
-                                style={styles.suggestedItemPill}
+                                style={[
+                                    styles.suggestedItemPill, 
+                                    { 
+                                        backgroundColor: Colors[colorScheme ?? 'light'].suggestedBackground,
+                                        borderColor: Colors[colorScheme ?? 'light'].border
+                                    }
+                                ]}
                                 disabled={!editable}
                             >
-                                <Text style={styles.suggestedItemText}>{item}</Text>
+                                <Text style={[styles.suggestedItemText, { color: Colors[colorScheme ?? 'light'].textSecondary }]}>{item}</Text>
                             </TouchableOpacity>
                         ))}
                     </ScrollView>
@@ -107,20 +128,18 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     label: {
-        fontSize: 16,
-        marginBottom: 4,
-        marginTop: 10,
+        fontSize: 15,
+        fontWeight: '500',
+        marginBottom: 8,
     },
     textInputContainer: {},
     input: {
-        height: 45,
-        borderColor: '#ccc',
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        fontSize: 15,
         borderWidth: 1,
-        borderRadius: 5,
-        paddingHorizontal: 10,
-        fontSize: 16,
         marginBottom: 12,
-        backgroundColor: '#FFFFFF',
     },
     textInputTheme: {
     },
@@ -136,16 +155,14 @@ const styles = StyleSheet.create({
     itemPill: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#E0E0E0',
-        borderRadius: 15,
-        paddingVertical: 6,
+        borderRadius: 16,
+        paddingVertical: 5,
         paddingHorizontal: 12,
         marginRight: 8,
         marginBottom: 8,
     },
     itemText: {
-        fontSize: 14,
-        color: '#333',
+        fontSize: 13,
         marginRight: 6,
     },
     removeItemButton: {
@@ -153,7 +170,6 @@ const styles = StyleSheet.create({
         padding: 2,
     },
     removeItemText: {
-        color: '#555',
         fontSize: 14,
         fontWeight: 'bold',
     },
@@ -161,21 +177,20 @@ const styles = StyleSheet.create({
         marginTop: 10,
     },
     suggestedItemsTitle: {
-        fontSize: 15,
-        fontWeight: '600',
+        fontSize: 14,
+        fontWeight: '500',
         marginBottom: 8,
     },
     suggestedItemPill: {
-        backgroundColor: '#D6EAF8',
-        borderRadius: 15,
-        paddingVertical: 6,
+        borderRadius: 16,
+        paddingVertical: 5,
         paddingHorizontal: 12,
         marginRight: 8,
         marginBottom: 8,
+        borderWidth: 1,
     },
     suggestedItemText: {
-        fontSize: 14,
-        color: '#2471A3',
+        fontSize: 13,
     },
 });
 

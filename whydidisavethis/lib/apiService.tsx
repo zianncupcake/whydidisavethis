@@ -13,7 +13,7 @@ if (!API_BASE_URL) {
 // Create an Axios instance with a base URL and default headers if needed
 const apiClient = axios.create({
     baseURL: API_BASE_URL,
-    timeout: 60000, // 60 second timeout (1 minute)
+    timeout: 10000, // 60 second timeout (1 minute)
     // headers: { 'X-Custom-Header': 'foobar' } // Example global header
 });
 
@@ -22,11 +22,6 @@ interface LoginResponse {
     access_token: string;
     token_type: string;
 }
-
-// interface UserResponse {
-//     id: number;
-//     username: string;
-// }
 export interface ItemCreatePayload {
     user_id: number;
     source_url?: string;
@@ -78,29 +73,40 @@ export const apiService = {
         params.append('username', username_form);
         params.append('password', password_form);
 
-        try {
-            const response = await apiClient.post<LoginResponse>(endpoint, params, {
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-            });
-            return response.data;
-        } catch (error) {
-            const axiosError = error as AxiosError<ApiErrorData>;
-            console.error("[apiService] axios login: Error", axiosError.response?.data || axiosError.message);
-            let errorMessage = axiosError.message || 'An unexpected error occurred during login.';
-            const errorData = axiosError.response?.data;
-            const status = axiosError.response?.status;
-
-            if (errorData?.detail) {
-                if (typeof errorData.detail === 'string') {
-                    errorMessage = errorData.detail;
-                } else if (Array.isArray(errorData.detail)) {
-                    errorMessage = errorData.detail.map(e => e.msg).join(', ');
+        const makeRequest = async (retryCount: number = 0): Promise<LoginResponse> => {
+            try {
+                const response = await apiClient.post<LoginResponse>(endpoint, params, {
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                });
+                return response.data;
+            } catch (error) {
+                const axiosError = error as AxiosError<ApiErrorData>;
+                
+                // Check if it's a timeout error and we haven't retried yet
+                if (axiosError.code === 'ECONNABORTED' && retryCount === 0) {
+                    console.log("[apiService] Login timeout detected, retrying once...");
+                    return makeRequest(1);
                 }
+                
+                console.error("[apiService] axios login: Error", axiosError.response?.data || axiosError.message);
+                let errorMessage = axiosError.message || 'An unexpected error occurred during login.';
+                const errorData = axiosError.response?.data;
+                const status = axiosError.response?.status;
+
+                if (errorData?.detail) {
+                    if (typeof errorData.detail === 'string') {
+                        errorMessage = errorData.detail;
+                    } else if (Array.isArray(errorData.detail)) {
+                        errorMessage = errorData.detail.map(e => e.msg).join(', ');
+                    }
+                }
+                throw new ApiServiceError(errorMessage, status, errorData);
             }
-            throw new ApiServiceError(errorMessage, status, errorData);
-        }
+        };
+
+        return makeRequest();
     },
 
     signup: async (username_req: string, password_req: string): Promise<User> => {
@@ -151,7 +157,6 @@ export const apiService = {
             const status = axiosError.response?.status;
 
             if (errorData?.detail) {
-                // ... (same error detail parsing as login) ...
                 if (typeof errorData.detail === 'string') {
                     errorMessage = errorData.detail;
                 } else if (Array.isArray(errorData.detail)) {
@@ -174,7 +179,6 @@ export const apiService = {
             console.log("[apiService] axios getMyProfile: Success", response.data);
             return response.data;
         } catch (error) {
-            // ... (similar error handling) ...
             const axiosError = error as AxiosError<ApiErrorData>;
             console.error("[apiService] axios getMyProfile: Error", axiosError.response?.data || axiosError.message);
             let errorMessage = axiosError.message || 'Failed to fetch profile.';
@@ -217,8 +221,7 @@ export const apiService = {
     },
 
     fetchUserItems: async (userId: number, query?: string, offset: number = 0, limit: number = 20): Promise<Item[]> => {
-        // Adjust endpoint to your actual API endpoint for fetching items
-        const endpoint = `/users/${userId}/items`; // Example endpoint
+        const endpoint = `/users/${userId}/items`;
         try {
             const params: any = {
                 offset,
@@ -229,7 +232,6 @@ export const apiService = {
             }
             
             const response = await apiClient.get<Item[]>(endpoint, { params }); // Expects an array of Item
-            // console.log("[apiService] axios fetchUserItems: Success", response.data);
             return response.data;
         } catch (error) {
             const axiosError = error as AxiosError<ApiErrorData>;
@@ -267,6 +269,67 @@ export const apiService = {
             console.error("[apiService] axios getItemById: Error", errorResponseData || axiosError.message);
 
             if (status === 404) {
+                errorMessage = "Item not found.";
+            } else if (errorResponseData?.detail) {
+                if (typeof errorResponseData.detail === 'string') {
+                    errorMessage = errorResponseData.detail;
+                } else if (Array.isArray(errorResponseData.detail) && errorResponseData.detail.length > 0) {
+                    errorMessage = errorResponseData.detail.map(e => e.msg || String(e)).join(', ');
+                }
+            }
+            throw new ApiServiceError(errorMessage, status, errorResponseData);
+        }
+    },
+
+    updateItem: async (itemId: number, itemData: Partial<ItemCreatePayload>): Promise<Item> => {
+        const endpoint = `/items/${itemId}`;
+        console.log(`[apiService] axios updateItem: Calling ${API_BASE_URL}${endpoint}`);
+        try {
+            const response = await apiClient.put<Item>(endpoint, itemData, {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            console.log("[apiService] axios updateItem: Success", response.data);
+            return response.data;
+        } catch (error) {
+            const axiosError = error as AxiosError<ApiErrorData>;
+            const errorResponseData = axiosError.response?.data;
+            const status = axiosError.response?.status;
+            let errorMessage = axiosError.message || `Failed to update item with ID ${itemId}.`;
+            console.error("[apiService] axios updateItem: Error", errorResponseData || axiosError.message);
+
+            if (status === 403) {
+                errorMessage = "You don't have permission to update this item.";
+            } else if (status === 404) {
+                errorMessage = "Item not found.";
+            } else if (errorResponseData?.detail) {
+                if (typeof errorResponseData.detail === 'string') {
+                    errorMessage = errorResponseData.detail;
+                } else if (Array.isArray(errorResponseData.detail) && errorResponseData.detail.length > 0) {
+                    errorMessage = errorResponseData.detail.map(e => e.msg || String(e)).join(', ');
+                }
+            }
+            throw new ApiServiceError(errorMessage, status, errorResponseData);
+        }
+    },
+
+    deleteItem: async (itemId: number): Promise<void> => {
+        const endpoint = `/items/${itemId}`;
+        console.log(`[apiService] axios deleteItem: Calling ${API_BASE_URL}${endpoint}`);
+        try {
+            await apiClient.delete(endpoint);
+            console.log("[apiService] axios deleteItem: Success");
+        } catch (error) {
+            const axiosError = error as AxiosError<ApiErrorData>;
+            const errorResponseData = axiosError.response?.data;
+            const status = axiosError.response?.status;
+            let errorMessage = axiosError.message || `Failed to delete item with ID ${itemId}.`;
+            console.error("[apiService] axios deleteItem: Error", errorResponseData || axiosError.message);
+
+            if (status === 403) {
+                errorMessage = "You don't have permission to delete this item.";
+            } else if (status === 404) {
                 errorMessage = "Item not found.";
             } else if (errorResponseData?.detail) {
                 if (typeof errorResponseData.detail === 'string') {

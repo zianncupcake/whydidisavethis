@@ -1,13 +1,16 @@
-import { Platform, StyleSheet, TextInput, Button, Alert, View, ScrollView, ActivityIndicator, Text, Image } from 'react-native';
+import { Platform, StyleSheet, TextInput, Button, Alert, View, ScrollView, ActivityIndicator, Text, Image, TouchableOpacity } from 'react-native';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Constants from 'expo-constants';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import PillInput from '@/components/PillInput';
 import { useAuth } from '@/utils/authContext';
 import { apiService, ApiServiceError, Item, ItemCreatePayload } from '@/lib/apiService';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabTwoScreen() {
   const { user } = useAuth();
+  const colorScheme = useColorScheme();
 
   const [socialMediaLink, setSocialMediaLink] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
@@ -310,36 +313,53 @@ export default function TabTwoScreen() {
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: Colors[colorScheme ?? 'light'].background }]}
       contentContainerStyle={styles.contentContainer}
       keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
     >
       {/* Autofill Section */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.subtitle}>Autofill from Social Media</Text>
-        <TextInput
-          style={[styles.input, styles.textInput]}
-          placeholder="Paste Instagram or TikTok link hereeee"
-          placeholderTextColor="#888"
-          value={socialMediaLink}
-          onChangeText={setSocialMediaLink}
-          keyboardType="url"
-          autoCapitalize="none"
-        />
-        {/* Using a View for Button to allow more styling if needed */}
-        <View style={styles.buttonContainer}>
-          <Button title="Autofill with Link" onPress={handleAutofillButtonPressed} color={Platform.OS === 'ios' ? '#007AFF' : undefined} />
+      <View style={[styles.sectionContainer, styles.autofillSection, { backgroundColor: Colors[colorScheme ?? 'light'].cardBackground }]}>
+        <Text style={[styles.sectionTitle, { color: Colors[colorScheme ?? 'light'].text }]}>✨ Quick Import</Text>
+        <Text style={[styles.sectionDescription, { color: Colors[colorScheme ?? 'light'].textSecondary }]}>Paste a link to auto-fill details</Text>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={[styles.linkInput, { backgroundColor: Colors[colorScheme ?? 'light'].inputBackground, color: Colors[colorScheme ?? 'light'].text, borderColor: Colors[colorScheme ?? 'light'].border }]}
+            placeholder="Paste Instagram or TikTok link"
+            placeholderTextColor={Colors[colorScheme ?? 'light'].textMuted}
+            value={socialMediaLink}
+            onChangeText={setSocialMediaLink}
+            keyboardType="url"
+            autoCapitalize="none"
+          />
         </View>
+        <TouchableOpacity 
+          style={[styles.primaryButton, { backgroundColor: Colors[colorScheme ?? 'light'].primary }, isLoading && styles.disabledButton]} 
+          onPress={handleAutofillButtonPressed}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={[styles.primaryButtonText, { color: '#fff' }]}>Autofill with Link</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.dividerContainer}>
+        <View style={[styles.divider, { backgroundColor: Colors[colorScheme ?? 'light'].border }]} />
+        <Text style={[styles.dividerText, { color: Colors[colorScheme ?? 'light'].textMuted }]}>OR</Text>
+        <View style={[styles.divider, { backgroundColor: Colors[colorScheme ?? 'light'].border }]} />
       </View>
 
       {/* Manual Form Entry Section */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.subtitle}>Or Enter Details Manually</Text>
+      <View style={styles.formSection}>
+        <Text style={[styles.sectionTitle, { color: Colors[colorScheme ?? 'light'].text }]}>📝 Add Details</Text>
 
-        {imageUrl && <View style={styles.imageContainer}>
+        {imageUrl && <View style={[styles.imageContainer, { backgroundColor: Colors[colorScheme ?? 'light'].cardBackground, borderColor: Colors[colorScheme ?? 'light'].border }]}>
           <Image
             source={{ uri: imageUrl }} // The `source` prop takes an object with a `uri` key
-            style={styles.image}
+            style={[styles.image, { backgroundColor: Colors[colorScheme ?? 'light'].placeholderBackground }]}
             resizeMode="contain" // Or "cover", "stretch", "center", "repeat"
             // Optional: Add a loading indicator while the image loads
             onLoadStart={() => console.log('[Image] Loading started...')}
@@ -348,66 +368,85 @@ export default function TabTwoScreen() {
           />
         </View>}
 
-        <Text style={styles.label}>Source URL (Optional)</Text>
-        <TextInput
-          style={[styles.input, styles.textInput]}
-          value={sourceUrl}
-          onChangeText={setSourceUrl}
-          placeholder="https://example.com/your-saved-post"
-          placeholderTextColor="#888"
-          keyboardType="url"
-          autoCapitalize="none"
-        />
-
-        <Text style={styles.label}>Notes (Optional)</Text>
-        <TextInput
-          style={[styles.input, styles.textInput, styles.multilineInput]}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Any thoughts, why you saved this, key takeaways..."
-          placeholderTextColor="#888"
-          multiline
-          numberOfLines={4}
-        />
-
-        <PillInput
-          label="Categories (Optional)"
-          placeholder="Type a category and press enter"
-          selectedItems={categories}
-          onSetSelectedItems={setCategories}
-          suggestedItems={suggestedCategories}
-          onSetSuggestedItems={setSuggestedCategories}
-          editable={!isLoading}
-        />
-
-        <PillInput
-          label="Tags (Optional)"
-          placeholder="Type a tag and press enter"
-          selectedItems={tags}
-          onSetSelectedItems={setTags}
-          suggestedItems={suggestedTags}
-          onSetSuggestedItems={setSuggestedTags}
-          editable={!isLoading}
-        />
-
-        <Text style={styles.label}>Creator (Optional)</Text>
-        <TextInput
-          style={[styles.input, styles.textInput]}
-          value={creator}
-          onChangeText={setCreator}
-          placeholder="E.g., @username or Creator's Name"
-          placeholderTextColor="#888"
-        />
-
-        {submitError && <View><Text style={styles.submitError}>{submitError}</Text></View>}
-
-        <View style={[styles.buttonContainer, styles.saveButtonContainer]}>
-          {isSubmitting ? (
-            <ActivityIndicator size="large" color="#0000ff" />
-          ) : (
-            <Button title="Save Post" onPress={handleSubmit} />
-          )}
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: Colors[colorScheme ?? 'light'].text }]}>Source URL</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: Colors[colorScheme ?? 'light'].inputBackground, color: Colors[colorScheme ?? 'light'].text, borderColor: Colors[colorScheme ?? 'light'].border }]}
+            value={sourceUrl}
+            onChangeText={setSourceUrl}
+            placeholder="https://example.com/your-saved-post"
+            placeholderTextColor={Colors[colorScheme ?? 'light'].textMuted}
+            keyboardType="url"
+            autoCapitalize="none"
+          />
         </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: Colors[colorScheme ?? 'light'].text }]}>Notes</Text>
+          <TextInput
+            style={[styles.input, styles.textArea, { backgroundColor: Colors[colorScheme ?? 'light'].inputBackground, color: Colors[colorScheme ?? 'light'].text, borderColor: Colors[colorScheme ?? 'light'].border }]}
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Why did you save this? Any key takeaways..."
+            placeholderTextColor={Colors[colorScheme ?? 'light'].textMuted}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <PillInput
+            label="Categories"
+            placeholder="Add categories..."
+            selectedItems={categories}
+            onSetSelectedItems={setCategories}
+            suggestedItems={suggestedCategories}
+            onSetSuggestedItems={setSuggestedCategories}
+            editable={!isLoading}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <PillInput
+            label="Tags"
+            placeholder="Add tags..."
+            selectedItems={tags}
+            onSetSelectedItems={setTags}
+            suggestedItems={suggestedTags}
+            onSetSuggestedItems={setSuggestedTags}
+            editable={!isLoading}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: Colors[colorScheme ?? 'light'].text }]}>Creator</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: Colors[colorScheme ?? 'light'].inputBackground, color: Colors[colorScheme ?? 'light'].text, borderColor: Colors[colorScheme ?? 'light'].border }]}
+            value={creator}
+            onChangeText={setCreator}
+            placeholder="@username or Creator's Name"
+            placeholderTextColor={Colors[colorScheme ?? 'light'].textMuted}
+          />
+        </View>
+
+        {submitError && (
+          <View style={[styles.errorContainer, { backgroundColor: Colors[colorScheme ?? 'light'].errorBackground, borderColor: Colors[colorScheme ?? 'light'].errorBorder }]}>
+            <Text style={[styles.submitError, { color: Colors[colorScheme ?? 'light'].error }]}>{submitError}</Text>
+          </View>
+        )}
+
+        <TouchableOpacity 
+          style={[styles.saveButton, { backgroundColor: Colors[colorScheme ?? 'light'].primary }, isSubmitting && styles.disabledButton]} 
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={[styles.saveButtonText, { color: '#fff' }]}>Save Post</Text>
+          )}
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -418,54 +457,149 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: 60,
+    paddingBottom: 100,
     paddingTop: Platform.OS === 'ios' ? 60 : 10,
   },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+  
+  // Autofill Section
+  autofillSection: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
   sectionContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
     marginBottom: 16,
-    // backgroundColor: '#f0f0f0', // Example background, adjust with ThemedView props or theme
-    borderRadius: 8,
   },
-  subtitle: {
-    marginBottom: 12,
-    fontSize: 18,
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  sectionDescription: {
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  
+  // Input Styles
+  inputContainer: {
+    marginBottom: 16,
+  },
+  linkInput: {
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    borderWidth: 1,
+  },
+  
+  // Primary Button
+  primaryButton: {
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  
+  // Divider
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginVertical: 24,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  
+  // Form Section
+  formSection: {
+    marginHorizontal: 16,
+    marginBottom: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
   },
   label: {
-    fontSize: 16,
-    marginBottom: 4,
-    // color: '#333', // ThemedText should handle this based on theme
-    marginTop: 10,
+    fontSize: 15,
+    fontWeight: '500',
+    marginBottom: 8,
   },
-  input: { // Base input style
-    height: 45,
-    borderColor: '#ccc', // Consider using theme colors
+  input: {
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
     borderWidth: 1,
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    fontSize: 16,
-    marginBottom: 12,
-    backgroundColor: '#FFFFFF',
-    // color: '#000', // Text color should ideally come from theme or be adaptable
   },
-  textInput: { // Specific style for TextInput to allow ThemedText for labels
-    // if you use ThemedTextInput, this might not be needed
-    // For now, assuming standard TextInput, so color needs to be managed
-    // This will be tricky with light/dark themes without a ThemedTextInput
-    // For a quick fix, you might set a general color or use Platform.select
+  textArea: {
+    height: 120,
+    paddingTop: 14,
+    textAlignVertical: 'top',
   },
-  multilineInput: {
+  
+  // Save Button
+  saveButton: {
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  saveButtonText: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  
+  // Error Styles
+  errorContainer: {
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12,
+    borderWidth: 1,
+  },
+  submitError: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  
+  // Image Preview
+  imageContainer: {
+    marginBottom: 20,
+    alignItems: 'center',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+  },
+  image: {
+    width: '100%',
     height: 200,
-    textAlignVertical: 'top', // For Android
-    paddingTop: 10,
+    borderRadius: 8,
   },
+  
+  // Legacy styles kept for compatibility
   buttonContainer: {
     marginTop: 10,
     marginBottom: 10,
@@ -473,19 +607,20 @@ const styles = StyleSheet.create({
   saveButtonContainer: {
     marginTop: 20,
   },
-  submitError: {
-    color: 'red',
-    marginVertical: 10
+  subtitle: {
+    marginBottom: 12,
+    fontSize: 18,
   },
-  imageContainer: {
-    marginTop: 20,
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  image: {
-    width: 300,
+  textInput: {},
+  multilineInput: {
     height: 200,
-    borderRadius: 8,
-    backgroundColor: '#e0e0e0',
+    textAlignVertical: 'top',
+    paddingTop: 10,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
 });

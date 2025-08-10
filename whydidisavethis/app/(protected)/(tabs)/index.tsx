@@ -17,6 +17,8 @@ import { useAuth } from '@/utils/authContext';
 import ItemCard from '@/components/ItemCard';
 import { Item, apiService } from '@/lib/apiService';
 import { useFocusEffect } from 'expo-router';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 const NUM_COLUMNS = 2;
 const CARD_MARGIN = 8;
@@ -25,6 +27,7 @@ const PAGE_SIZE = 20;
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const colorScheme = useColorScheme();
 
   const [items, setItems] = useState<Item[]>([]);
   const [isLoadingItems, setIsLoadingItems] = useState(true);
@@ -122,9 +125,9 @@ export default function HomeScreen() {
   // If isLoadingItems is true AND there are no items yet (initial load)
   if (isLoadingItems && items.length === 0) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" />
-        <Text>Loading your items...</Text>
+      <View style={[styles.centered, { backgroundColor: Colors[colorScheme ?? 'light'].background }]}>
+        <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].primary} />
+        <Text style={{ color: Colors[colorScheme ?? 'light'].text }}>Loading your items...</Text>
       </View>
     );
   }
@@ -132,8 +135,8 @@ export default function HomeScreen() {
   // If loading is done and no items (could be genuinely no items, or a fetch error)
   if (items.length === 0) {
     return (
-      <View style={styles.centered}>
-        <Text>You haven&apos;t added any items yet!</Text>
+      <View style={[styles.centered, { backgroundColor: Colors[colorScheme ?? 'light'].background }]}>
+        <Text style={{ color: Colors[colorScheme ?? 'light'].text }}>You haven&apos;t added any items yet!</Text>
         <View style={{ marginTop: 20 }}>
           <Button title="Refresh Items" onPress={() => loadItems()} disabled={isLoadingItems} />
         </View>
@@ -173,24 +176,25 @@ export default function HomeScreen() {
     if (!isLoadingMore) return null;
     return (
       <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" />
+        <ActivityIndicator size="small" color={Colors[colorScheme ?? 'light'].primary} />
       </View>
     );
   };
 
   return (
-    <View style={styles.screenContainer}>
+    <View style={[styles.screenContainer, { backgroundColor: Colors[colorScheme ?? 'light'].background }]}>
       <View style={styles.searchContainer}>
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { backgroundColor: Colors[colorScheme ?? 'light'].inputBackground, color: Colors[colorScheme ?? 'light'].text, borderColor: Colors[colorScheme ?? 'light'].border }]}
           placeholder="Smart search with AI"
+          placeholderTextColor={Colors[colorScheme ?? 'light'].textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
           onSubmitEditing={handleSearch}
           returnKeyType="search"
         />
         <TouchableOpacity
-          style={styles.searchButton}
+          style={[styles.searchButton, { backgroundColor: Colors[colorScheme ?? 'light'].primary }]}
           onPress={handleSearch}
           disabled={isLoadingItems || !searchQuery.trim()}
         >
@@ -198,11 +202,11 @@ export default function HomeScreen() {
         </TouchableOpacity>
         {searchQuery.length > 0 && (
           <TouchableOpacity
-            style={styles.clearButton}
+            style={[styles.clearButton, { backgroundColor: Colors[colorScheme ?? 'light'].border }]}
             onPress={handleClear}
             disabled={isLoadingItems}
           >
-            <Text style={styles.clearButtonText}>✕</Text>
+            <Text style={[styles.clearButtonText, { color: Colors[colorScheme ?? 'light'].textSecondary }]}>✕</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -223,7 +227,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
-    backgroundColor: '#f0f2f5',
     paddingTop: Platform.OS === 'ios' ? 60 : 10, // Keep if needed for status bar
   },
   centered: {
@@ -246,11 +249,9 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 40,
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 20,
     paddingHorizontal: 15,
     fontSize: 16,
-    backgroundColor: '#f8f8f8',
   },
   searchButton: {
     marginLeft: 10,
@@ -258,11 +259,10 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
     borderRadius: 20,
   },
   searchButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -272,12 +272,10 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0',
     borderRadius: 20,
   },
   clearButtonText: {
     fontSize: 20,
-    color: '#666',
   },
   footerLoader: {
     paddingVertical: 20,

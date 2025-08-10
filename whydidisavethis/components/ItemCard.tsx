@@ -2,6 +2,8 @@ import { Item } from '@/lib/apiService';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { View, Text, Image, StyleSheet, Linking, TouchableOpacity } from 'react-native';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 // export interface Item {
 //     id: number;
@@ -19,6 +21,7 @@ interface ItemCardProps {
 
 const ItemCard: React.FC<ItemCardProps> = ({ item }) => {
     const router = useRouter();
+    const colorScheme = useColorScheme();
     // const handlePressSourceUrl = () => {
 
     //     if (item.source_url) {
@@ -42,17 +45,17 @@ const ItemCard: React.FC<ItemCardProps> = ({ item }) => {
 
     return (
         <TouchableOpacity onPress={handleCardPress}>
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: Colors[colorScheme ?? 'light'].cardBackground }]}>
                 {item.image_url ? (
                     <Image source={{ uri: item.image_url }} style={styles.cardImage} resizeMode="cover" />
                 ) : (
-                    <View style={[styles.cardImage, styles.imagePlaceholder]}>
-                        <Text style={styles.imagePlaceholderText}>No Image</Text>
+                    <View style={[styles.cardImage, styles.imagePlaceholder, { backgroundColor: Colors[colorScheme ?? 'light'].placeholderBackground }]}>
+                        <Text style={[styles.imagePlaceholderText, { color: Colors[colorScheme ?? 'light'].textSecondary }]}>No Image</Text>
                     </View>
                 )}
                 <View style={styles.cardContent}>
                     {item.notes && (
-                        <Text style={styles.cardDescription} numberOfLines={3}>
+                        <Text style={[styles.cardDescription, { color: Colors[colorScheme ?? 'light'].textSecondary }]} numberOfLines={3}>
                             {item.notes}
                         </Text>
                     )}
@@ -94,7 +97,6 @@ const ItemCard: React.FC<ItemCardProps> = ({ item }) => {
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: '#FFFFFF',
         borderRadius: 10,
         overflow: 'hidden',
         shadowColor: '#000',
@@ -109,12 +111,10 @@ const styles = StyleSheet.create({
         height: 200, // Or make this dynamic/aspect ratio based if needed
     },
     imagePlaceholder: {
-        backgroundColor: '#e1e4e8',
         justifyContent: 'center',
         alignItems: 'center',
     },
     imagePlaceholderText: {
-        color: '#586069',
         fontSize: 12,
     },
     cardContent: {
@@ -124,7 +124,6 @@ const styles = StyleSheet.create({
     },
     cardDescription: {
         fontSize: 12,
-        color: '#586069',
         marginBottom: 6,
         lineHeight: 16,
     },

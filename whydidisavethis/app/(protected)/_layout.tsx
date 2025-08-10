@@ -35,6 +35,13 @@ export default function ProtectedLayout() {
           title: 'Post Details',
         }}
       />
+      <Stack.Screen
+        name="item/edit"
+        options={{
+          headerShown: true,
+          title: 'Edit Post',
+        }}
+      />
     </Stack>
   );
 }

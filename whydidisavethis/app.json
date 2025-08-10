@@ -2,7 +2,7 @@
   "expo": {
     "name": "whydidisavethis",
     "slug": "whydidisavethis",
-    "version": "1.3",
+    "version": "1.4",
     "orientation": "portrait",
     "icon": "./assets/images/saveicon.png",
     "scheme": "whydidisavethis",
@@ -30,7 +30,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/saveicon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
