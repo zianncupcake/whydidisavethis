@@ -9,19 +9,20 @@ import {
     Linking,
     TouchableOpacity,
     Button,
-    Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Item, apiService, ApiServiceError } from '@/lib/apiService';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useActionSheet } from '@expo/react-native-action-sheet';
 
 export default function ItemDetailScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
     const navigation = useNavigation();
     const colorScheme = useColorScheme();
+    const { showActionSheetWithOptions } = useActionSheet();
 
     const [item, setItem] = useState<Item | null>(null); // Item can be null if not found or error
     const [isLoadingDetail, setIsLoadingDetail] = useState(true);
@@ -31,33 +32,98 @@ export default function ItemDetailScreen() {
     const renderCount = React.useRef(0);
     renderCount.current += 1;
 
-    const handleDelete = async () => {
-        Alert.alert(
-            "Delete Post",
-            "Are you sure you want to delete this post?",
-            [
-                {
-                    text: "Cancel",
-                    style: "cancel"
+    const showSuccessAlert = (message: string) => {
+        const options = ["OK"];
+        const cancelButtonIndex = 0;
+
+        showActionSheetWithOptions(
+            {
+                options,
+                cancelButtonIndex,
+                message,
+                textStyle: { 
+                    color: Colors[colorScheme ?? 'light'].text,
+                    fontSize: 17,
+                    fontWeight: '400',
                 },
-                {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: async () => {
-                        setIsDeleting(true);
-                        try {
-                            await apiService.deleteItem(parseInt(id));
-                            Alert.alert("Success", "Post deleted successfully");
-                            router.back();
-                        } catch (error) {
-                            console.error("[ItemDetailScreen] Failed to delete item:", error);
-                            const errorMessage = error instanceof ApiServiceError ? error.message : "Failed to delete post";
-                            Alert.alert("Error", errorMessage);
-                            setIsDeleting(false);
-                        }
+                messageTextStyle: {
+                    color: Colors[colorScheme ?? 'light'].textSecondary,
+                    fontSize: 13,
+                },
+                tintColor: Colors[colorScheme ?? 'light'].text,
+            },
+            () => {}
+        );
+    };
+
+    const showErrorAlert = (title: string, message: string) => {
+        const options = ["OK"];
+        const cancelButtonIndex = 0;
+
+        showActionSheetWithOptions(
+            {
+                options,
+                cancelButtonIndex,
+                title,
+                message,
+                textStyle: { 
+                    color: Colors[colorScheme ?? 'light'].text,
+                    fontSize: 17,
+                    fontWeight: '400',
+                },
+                titleTextStyle: {
+                    color: Colors[colorScheme ?? 'light'].error,
+                    fontSize: 17,
+                    fontWeight: '600',
+                },
+                messageTextStyle: {
+                    color: Colors[colorScheme ?? 'light'].textSecondary,
+                    fontSize: 13,
+                },
+                tintColor: Colors[colorScheme ?? 'light'].text,
+            },
+            () => {}
+        );
+    };
+
+    const handleDelete = async () => {
+        const options = ["Delete Post", "Cancel"];
+        const destructiveButtonIndex = 0;
+        const cancelButtonIndex = 1;
+
+        showActionSheetWithOptions(
+            {
+                options,
+                cancelButtonIndex,
+                destructiveButtonIndex,
+                message: "Are you sure you want to delete this post?",
+                textStyle: { 
+                    color: Colors[colorScheme ?? 'light'].text,
+                    fontSize: 17,
+                    fontWeight: '400',
+                },
+                messageTextStyle: {
+                    color: Colors[colorScheme ?? 'light'].textSecondary,
+                    fontSize: 13,
+                },
+                destructiveColor: '#EF4444',
+                tintColor: Colors[colorScheme ?? 'light'].text,
+            },
+            async (buttonIndex) => {
+                if (buttonIndex === 0) {
+                    setIsDeleting(true);
+                    try {
+                        await apiService.deleteItem(parseInt(id));
+                        showSuccessAlert("Post deleted successfully");
+                        router.back();
+                    } catch (error) {
+                        console.error("[ItemDetailScreen] Failed to delete item:", error);
+                        const errorMessage = error instanceof ApiServiceError ? error.message : "Failed to delete post";
+                        showErrorAlert("Error", errorMessage);
+                        setIsDeleting(false);
                     }
                 }
-            ]
+            }
         );
     };
 
@@ -74,24 +140,30 @@ export default function ItemDetailScreen() {
     };
 
     const showOptionsMenu = () => {
-        Alert.alert(
-            "Actions",
-            "",
-            [
-                {
-                    text: "Edit post",
-                    onPress: handleEdit
+        const options = ["Edit post", "Delete post", "Cancel"];
+        const destructiveButtonIndex = 1;
+        const cancelButtonIndex = 2;
+
+        showActionSheetWithOptions(
+            {
+                options,
+                cancelButtonIndex,
+                destructiveButtonIndex,
+                textStyle: { 
+                    color: Colors[colorScheme ?? 'light'].text,
+                    fontSize: 17,
+                    fontWeight: '400',
                 },
-                {
-                    text: "Delete post",
-                    style: "destructive",
-                    onPress: handleDelete
-                },
-                {
-                    text: "Cancel",
-                    style: "cancel"
+                destructiveColor: '#EF4444',
+                tintColor: Colors[colorScheme ?? 'light'].text,
+            },
+            (buttonIndex) => {
+                if (buttonIndex === 0) {
+                    handleEdit();
+                } else if (buttonIndex === 1) {
+                    handleDelete();
                 }
-            ]
+            }
         );
     };
 

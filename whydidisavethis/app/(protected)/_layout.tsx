@@ -1,5 +1,7 @@
 import { useAuth } from "@/utils/authContext";
 import { Redirect, Stack } from "expo-router";
+import { useColorScheme } from "@/hooks/useColorScheme";
+import { Colors } from "@/constants/Colors";
 
 export const unstable_settings = {
   initialRouteName: "(tabs)", // anchor
@@ -10,6 +12,7 @@ export default function ProtectedLayout() {
     isReady,
     isLoggedIn
   } = useAuth();
+  const colorScheme = useColorScheme();
 
   if (!isReady) {
     return null;
@@ -33,6 +36,13 @@ export default function ProtectedLayout() {
         options={{
           headerShown: true,
           title: 'Post Details',
+          headerStyle: {
+            backgroundColor: Colors[colorScheme ?? 'light'].cardBackground,
+          },
+          headerTintColor: Colors[colorScheme ?? 'light'].text,
+          headerTitleStyle: {
+            color: Colors[colorScheme ?? 'light'].text,
+          },
         }}
       />
       <Stack.Screen
@@ -40,6 +50,13 @@ export default function ProtectedLayout() {
         options={{
           headerShown: true,
           title: 'Edit Post',
+          headerStyle: {
+            backgroundColor: Colors[colorScheme ?? 'light'].cardBackground,
+          },
+          headerTintColor: Colors[colorScheme ?? 'light'].text,
+          headerTitleStyle: {
+            color: Colors[colorScheme ?? 'light'].text,
+          },
         }}
       />
     </Stack>

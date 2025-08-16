@@ -2,96 +2,229 @@ import React from 'react';
 import {
     View,
     Text,
-    Button,
+    ScrollView,
     ActivityIndicator,
     StyleSheet,
     TouchableOpacity,
+    Platform,
 } from 'react-native';
 import { useAuth } from '@/utils/authContext';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { Ionicons } from '@expo/vector-icons';
+import { useActionSheet } from '@expo/react-native-action-sheet';
 
 export default function SettingsScreen() {
     const {
         logOut,
         isLoadingAction,
         actionError,
-        deleteUser
+        deleteUser,
+        user
     } = useAuth();
     const colorScheme = useColorScheme();
+    const { showActionSheetWithOptions } = useActionSheet();
 
     const handleLogout = async () => {
-        await logOut();
+        const options = ["Log Out", "Cancel"];
+        const destructiveButtonIndex = 0;
+        const cancelButtonIndex = 1;
+
+        showActionSheetWithOptions(
+            {
+                options,
+                cancelButtonIndex,
+                destructiveButtonIndex,
+                message: "Are you sure you want to log out?",
+                textStyle: { 
+                    color: Colors[colorScheme ?? 'light'].text,
+                    fontSize: 17,
+                    fontWeight: '400',
+                },
+                messageTextStyle: {
+                    color: Colors[colorScheme ?? 'light'].textSecondary,
+                    fontSize: 13,
+                },
+                destructiveColor: '#EF4444',
+                tintColor: Colors[colorScheme ?? 'light'].text,
+            },
+            (buttonIndex) => {
+                if (buttonIndex === 0) {
+                    logOut();
+                }
+            }
+        );
     };
 
     const handleDeleteAccount = async () => {
-        await deleteUser();
+        const options = ["Delete Account", "Cancel"];
+        const destructiveButtonIndex = 0;
+        const cancelButtonIndex = 1;
+
+        showActionSheetWithOptions(
+            {
+                options,
+                cancelButtonIndex,
+                destructiveButtonIndex,
+                message: "This action cannot be undone. All your data will be permanently deleted.",
+                textStyle: { 
+                    color: Colors[colorScheme ?? 'light'].text,
+                    fontSize: 17,
+                    fontWeight: '400',
+                },
+                messageTextStyle: {
+                    color: Colors[colorScheme ?? 'light'].textSecondary,
+                    fontSize: 13,
+                },
+                destructiveColor: '#EF4444',
+                tintColor: Colors[colorScheme ?? 'light'].text,
+            },
+            (buttonIndex) => {
+                if (buttonIndex === 0) {
+                    deleteUser();
+                }
+            }
+        );
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: Colors[colorScheme ?? 'light'].background }]}>
+        <ScrollView style={[styles.container, { backgroundColor: Colors[colorScheme ?? 'light'].background }]}>
+            <View style={styles.topPadding} />
+            
             {actionError && (
-                <Text style={[styles.errorText, { color: Colors[colorScheme ?? 'light'].error }]}>{actionError}</Text>
+                <View style={[styles.errorContainer, { backgroundColor: Colors[colorScheme ?? 'light'].errorBackground }]}>
+                    <Text style={[styles.errorText, { color: Colors[colorScheme ?? 'light'].error }]}>{actionError}</Text>
+                </View>
             )}
 
             {isLoadingAction && (
                 <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].primary} style={styles.loader} />
             )}
 
-            <TouchableOpacity 
-                style={[styles.button, styles.logoutButton, { backgroundColor: Colors[colorScheme ?? 'light'].errorBackground, borderColor: Colors[colorScheme ?? 'light'].errorBorder }, isLoadingAction && styles.disabledButton]} 
-                onPress={handleLogout}
-                disabled={isLoadingAction}
-            >
-                <Text style={[styles.buttonText, { color: Colors[colorScheme ?? 'light'].error }]}>Log Out</Text>
-            </TouchableOpacity>
+            <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: Colors[colorScheme ?? 'light'].textMuted }]}>ACCOUNT</Text>
+                
+                <View style={[styles.card, { backgroundColor: Colors[colorScheme ?? 'light'].cardBackground }]}>
+                    <View style={[styles.userInfo, { borderBottomColor: Colors[colorScheme ?? 'light'].border }]}>
+                        <View style={[styles.avatar, { backgroundColor: Colors[colorScheme ?? 'light'].primary }]}>
+                            <Text style={styles.avatarText}>
+                                {user?.username?.charAt(0).toUpperCase() || 'U'}
+                            </Text>
+                        </View>
+                        <View style={styles.userDetails}>
+                            <Text style={[styles.username, { color: Colors[colorScheme ?? 'light'].text }]}>
+                                {user?.username || 'User'}
+                            </Text>
+                            <Text style={[styles.email, { color: Colors[colorScheme ?? 'light'].textSecondary }]}>
+                                Signed in
+                            </Text>
+                        </View>
+                    </View>
 
-            <TouchableOpacity 
-                style={[styles.button, styles.deleteButton, { backgroundColor: Colors[colorScheme ?? 'light'].errorBackground, borderColor: Colors[colorScheme ?? 'light'].error }, isLoadingAction && styles.disabledButton]} 
-                onPress={handleDeleteAccount}
-                disabled={isLoadingAction}
-            >
-                <Text style={[styles.buttonText, { color: Colors[colorScheme ?? 'light'].error }]}>Delete Account</Text>
-            </TouchableOpacity>
-        </View>
+                    <TouchableOpacity 
+                        style={styles.menuItem}
+                        onPress={handleLogout}
+                        disabled={isLoadingAction}
+                    >
+                        <Ionicons name="log-out-outline" size={22} color={Colors[colorScheme ?? 'light'].text} />
+                        <Text style={[styles.menuItemText, { color: Colors[colorScheme ?? 'light'].text }]}>Log Out</Text>
+                        <Ionicons name="chevron-forward" size={20} color={Colors[colorScheme ?? 'light'].textMuted} />
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: Colors[colorScheme ?? 'light'].textMuted }]}>DATA</Text>
+                
+                <View style={[styles.card, { backgroundColor: Colors[colorScheme ?? 'light'].cardBackground }]}>
+                    <TouchableOpacity 
+                        style={styles.menuItem}
+                        onPress={handleDeleteAccount}
+                        disabled={isLoadingAction}
+                    >
+                        <Ionicons name="trash-outline" size={22} color={Colors[colorScheme ?? 'light'].error} />
+                        <Text style={[styles.menuItemText, { color: Colors[colorScheme ?? 'light'].error }]}>Delete Account</Text>
+                        <Ionicons name="chevron-forward" size={20} color={Colors[colorScheme ?? 'light'].textMuted} />
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: 'center',
-        padding: 24,
     },
-    button: {
-        marginBottom: 20,
-        paddingVertical: 16,
+    topPadding: {
+        height: Platform.OS === 'ios' ? 60 : 20,
+    },
+    section: {
+        marginBottom: 32,
         paddingHorizontal: 20,
-        borderRadius: 12,
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 3,
-        alignItems: 'center',
-        borderWidth: 1,
     },
-    logoutButton: {},
-    deleteButton: {},
-    disabledButton: {
-        opacity: 0.6,
-    },
-    buttonText: {
-        fontSize: 16,
+    sectionTitle: {
+        fontSize: 13,
         fontWeight: '600',
+        letterSpacing: 0.5,
+        marginBottom: 8,
+        textTransform: 'uppercase',
+    },
+    card: {
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    userInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        borderBottomWidth: 1,
+    },
+    avatar: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    avatarText: {
+        color: '#FFFFFF',
+        fontSize: 18,
+        fontWeight: '600',
+    },
+    userDetails: {
+        flex: 1,
+    },
+    username: {
+        fontSize: 17,
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    email: {
+        fontSize: 15,
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        minHeight: 56,
+    },
+    menuItemText: {
+        flex: 1,
+        fontSize: 17,
+        marginLeft: 12,
+        fontWeight: '400',
+    },
+    errorContainer: {
+        margin: 20,
+        padding: 12,
+        borderRadius: 8,
     },
     errorText: {
         textAlign: 'center',
-        marginVertical: 15,
         fontSize: 14,
+        fontWeight: '500',
     },
     loader: {
         marginVertical: 20,

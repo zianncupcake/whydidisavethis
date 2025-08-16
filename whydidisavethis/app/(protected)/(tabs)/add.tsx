@@ -1,4 +1,4 @@
-import { Platform, StyleSheet, TextInput, Button, Alert, View, ScrollView, ActivityIndicator, Text, Image, TouchableOpacity } from 'react-native';
+import { Platform, StyleSheet, TextInput, Button, View, ScrollView, ActivityIndicator, Text, Image, TouchableOpacity } from 'react-native';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Constants from 'expo-constants';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -7,10 +7,12 @@ import { useAuth } from '@/utils/authContext';
 import { apiService, ApiServiceError, Item, ItemCreatePayload } from '@/lib/apiService';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useActionSheet } from '@expo/react-native-action-sheet';
 
 export default function TabTwoScreen() {
   const { user } = useAuth();
   const colorScheme = useColorScheme();
+  const { showActionSheetWithOptions } = useActionSheet();
 
   const [socialMediaLink, setSocialMediaLink] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
@@ -36,6 +38,99 @@ export default function TabTwoScreen() {
 
   const logToConsole = (...args: any[]) => {
     console.log('[ExploreScreen WS]', ...args);
+  };
+
+  const showErrorAlert = (title: string, message: string) => {
+    const options = ["OK"];
+    const cancelButtonIndex = 0;
+
+    showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex,
+        title,
+        message,
+        textStyle: { 
+          color: Colors[colorScheme ?? 'light'].text,
+          fontSize: 17,
+          fontWeight: '400',
+        },
+        titleTextStyle: {
+          color: Colors[colorScheme ?? 'light'].error,
+          fontSize: 17,
+          fontWeight: '600',
+        },
+        messageTextStyle: {
+          color: Colors[colorScheme ?? 'light'].textSecondary,
+          fontSize: 13,
+        },
+        tintColor: Colors[colorScheme ?? 'light'].text,
+      },
+      () => {}
+    );
+  };
+
+  const showSuccessAlert = (message: string, onDismiss?: () => void) => {
+    const options = ["OK"];
+    const cancelButtonIndex = 0;
+
+    showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex,
+        message,
+        textStyle: { 
+          color: Colors[colorScheme ?? 'light'].text,
+          fontSize: 17,
+          fontWeight: '400',
+        },
+        messageTextStyle: {
+          color: Colors[colorScheme ?? 'light'].textSecondary,
+          fontSize: 13,
+        },
+        tintColor: Colors[colorScheme ?? 'light'].text,
+      },
+      () => {
+        if (onDismiss) onDismiss();
+      }
+    );
+  };
+
+  const showConfirmAlert = (title: string, message: string, confirmText: string, onConfirm: () => void) => {
+    const options = [confirmText, "Cancel"];
+    const destructiveButtonIndex = 0;
+    const cancelButtonIndex = 1;
+
+    showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex,
+        destructiveButtonIndex,
+        title,
+        message,
+        textStyle: { 
+          color: Colors[colorScheme ?? 'light'].text,
+          fontSize: 17,
+          fontWeight: '400',
+        },
+        titleTextStyle: {
+          color: Colors[colorScheme ?? 'light'].text,
+          fontSize: 17,
+          fontWeight: '600',
+        },
+        messageTextStyle: {
+          color: Colors[colorScheme ?? 'light'].textSecondary,
+          fontSize: 13,
+        },
+        destructiveColor: '#EF4444',
+        tintColor: Colors[colorScheme ?? 'light'].text,
+      },
+      (buttonIndex) => {
+        if (buttonIndex === 0) {
+          onConfirm();
+        }
+      }
+    );
   };
 
   const connectWebSocket = useCallback((taskId: string, submittedLink: string) => {
@@ -85,10 +180,10 @@ export default function TabTwoScreen() {
               setImageUrl(data.r2ImageUrl || '');
               logToConsole(`ONMESSAGE: SUCCESS processed for ${taskId}. Setting isLoading=false, currentTaskId=null.`);
             } else if (data && data.error) {
-              Alert.alert('Task Error', `The processing task failed: ${data.error}`);
+              showErrorAlert('Task Error', `The processing task failed: ${data.error}`);
               logToConsole(`ONMESSAGE: Task data error for ${taskId}. Setting isLoading=false, currentTaskId=null.`);
             } else {
-              Alert.alert('Task Error', 'Processing completed but result format is unexpected.');
+              showErrorAlert('Task Error', 'Processing completed but result format is unexpected.');
               logToConsole(`ONMESSAGE: Unexpected result format for ${taskId}. Setting isLoading=false, currentTaskId=null.`);
             }
             setIsLoading(false);
@@ -96,12 +191,12 @@ export default function TabTwoScreen() {
             setSocialMediaLink('')
             ws.current?.close(1000, "Task successful");
           } else if (message.status === 'FAILURE' || message.status === 'FAILED') {
-            Alert.alert('Processing Failed', `Task failed: ${JSON.stringify(message.result?.error || message.result)}`);
+            showErrorAlert('Processing Failed', `Task failed: ${JSON.stringify(message.result?.error || message.result)}`);
             setIsLoading(false);
             setCurrentTaskId(null);
             ws.current?.close(1000, "Task failed");
           } else if (message.status === 'ERROR' || message.status === 'UNKNOWN_STATUS') {
-            Alert.alert('Processing Issue', `An issue occurred: ${JSON.stringify(message.result?.error || "Unknown error")}`);
+            showErrorAlert('Processing Issue', `An issue occurred: ${JSON.stringify(message.result?.error || "Unknown error")}`);
             setIsLoading(false);
             setCurrentTaskId(null);
             ws.current?.close(1000, "Task error/unknown");
@@ -111,7 +206,7 @@ export default function TabTwoScreen() {
         }
       } catch (error) {
         logToConsole('Error processing WebSocket message:', error);
-        Alert.alert('WebSocket Error', 'Received an invalid message from the server.');
+        showErrorAlert('WebSocket Error', 'Received an invalid message from the server.');
         if (currentTaskId === taskId) { // Check against current state if this error is for the active task
           setIsLoading(false);
           setCurrentTaskId(null);
@@ -122,7 +217,7 @@ export default function TabTwoScreen() {
 
     ws.current.onerror = (error) => {
       logToConsole('WebSocket error:', error);
-      Alert.alert('WebSocket Connection Error', 'Could not connect to the update service. Please try again.');
+      showErrorAlert('WebSocket Connection Error', 'Could not connect to the update service. Please try again.');
       setIsLoading(false);
       setCurrentTaskId(null);
     };
@@ -142,17 +237,17 @@ export default function TabTwoScreen() {
     // Prevent new submissions if one is already in progress
     if (isLoading) {
       logToConsole(`Autofill for "${urlToSubmit}" attempted while task "${currentTaskId || 'N/A'}" is already processing. Ignoring new request.`);
-      Alert.alert("Processing Busy", "Another link is currently being processed. Please wait.");
+      showErrorAlert("Processing Busy", "Another link is currently being processed. Please wait.");
       return;
     }
 
     if (!urlToSubmit.trim()) {
-      Alert.alert('Input Required', 'A valid link is needed to autofill.');
+      showErrorAlert('Input Required', 'A valid link is needed to autofill.');
       // No need to setIsLoading(false) here as it wasn't set true yet for this path
       return;
     }
     if (!BACKEND_API_URL) {
-      Alert.alert('Configuration Error', 'Backend API endpoint is not configured.');
+      showErrorAlert('Configuration Error', 'Backend API endpoint is not configured.');
       // No need to setIsLoading(false) here
       return;
     }
@@ -188,13 +283,13 @@ export default function TabTwoScreen() {
           try {
             const textResponse = await response.text();
             logToConsole('PROCESS_AUTOFILL: Non-JSON Response from server:', textResponse);
-            Alert.alert('Server Error', `Received an unexpected response. Status: ${response.status}. Check console for details.`);
+            showErrorAlert('Server Error', `Received an unexpected response. Status: ${response.status}. Check console for details.`);
           } catch (textReadError) {
             logToConsole('PROCESS_AUTOFILL: Failed to read response as text:', textReadError);
-            Alert.alert('Server Error', `Unparseable response. Status: ${response.status}`);
+            showErrorAlert('Server Error', `Unparseable response. Status: ${response.status}`);
           }
         } else {
-          Alert.alert('Network Error', 'No response received from server for JSON parse step.');
+          showErrorAlert('Network Error', 'No response received from server for JSON parse step.');
         }
         setIsLoading(false);
         return;
@@ -207,16 +302,16 @@ export default function TabTwoScreen() {
       }
 
       if (data.task_id) {
-        Alert.alert('URL Submitted', `Processing started, please wait!!!`);
+        showSuccessAlert('Processing started, please wait!!!');
         setCurrentTaskId(data.task_id); // Set the new task ID
         connectWebSocket(data.task_id, urlToSubmit);
       } else {
-        Alert.alert('Submission Error', data.message || 'Failed to get a task ID.');
+        showErrorAlert('Submission Error', data.message || 'Failed to get a task ID.');
         setIsLoading(false); // Reset loading if submission itself failed to return a task_id
       }
     } catch (error: any) {
       logToConsole('Autofill API submission error:', error);
-      Alert.alert('Submission Error', `Could not submit URL: ${error.message}`);
+      showErrorAlert('Submission Error', `Could not submit URL: ${error.message}`);
       setIsLoading(false); // Reset loading on error
     }
     // `connectWebSocket` is stable due to its own useCallback([], ...)
@@ -238,7 +333,7 @@ export default function TabTwoScreen() {
         setLastProcessedDeepLink(deepLinkUrl); // Mark this specific (encoded) deepLinkUrl as processed
       } catch (e) {
         logToConsole('Failed to decode deep link URL:', e);
-        Alert.alert('Error', 'Received an invalid URL via deep link.');
+        showErrorAlert('Error', 'Received an invalid URL via deep link.');
         setLastProcessedDeepLink(deepLinkUrl); // Mark as processed to avoid error loops with the same invalid URL
       }
     }
@@ -256,7 +351,7 @@ export default function TabTwoScreen() {
 
   const handleSubmit = async () => {
     if (!user) {
-      Alert.alert(
+      showErrorAlert(
         "User Not Authenticated",
         "You need to be logged in to add an item. Please try logging in again."
       );
@@ -279,7 +374,7 @@ export default function TabTwoScreen() {
     try {
       const createdItem: Item = await apiService.addItem(postData);
       console.log('Item created successfully:', createdItem);
-      Alert.alert('Success!', 'Item added successfully.');
+      showSuccessAlert('Item added successfully.');
 
       router.replace('/');
 
@@ -290,13 +385,13 @@ export default function TabTwoScreen() {
       console.error('Failed to add item:', error);
       if (error instanceof ApiServiceError) {
         setSubmitError(error.message);
-        Alert.alert('Error Adding Item', error.message);
+        showErrorAlert('Error Adding Item', error.message);
       } else if (error instanceof Error) {
         setSubmitError(error.message);
-        Alert.alert('Error', 'An unexpected error occurred: ' + error.message);
+        showErrorAlert('Error', 'An unexpected error occurred: ' + error.message);
       } else {
         setSubmitError('An unexpected error occurred.');
-        Alert.alert('Error', 'An unexpected error occurred.');
+        showErrorAlert('Error', 'An unexpected error occurred.');
       }
     } finally {
       setIsSubmitting(false);

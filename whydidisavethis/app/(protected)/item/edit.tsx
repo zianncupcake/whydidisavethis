@@ -1,4 +1,4 @@
-import { Platform, StyleSheet, TextInput, Button, Alert, View, ScrollView, ActivityIndicator, Text, Image, TouchableOpacity } from 'react-native';
+import { Platform, StyleSheet, TextInput, Button, View, ScrollView, ActivityIndicator, Text, Image, TouchableOpacity } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import PillInput from '@/components/PillInput';
@@ -6,14 +6,15 @@ import { useAuth } from '@/utils/authContext';
 import { apiService, ApiServiceError, Item, ItemCreatePayload } from '@/lib/apiService';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useActionSheet } from '@expo/react-native-action-sheet';
 
 export default function EditItemScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const colorScheme = useColorScheme();
+  const { showActionSheetWithOptions } = useActionSheet();
   const { id, itemData } = useLocalSearchParams<{ id: string; itemData: string }>();
   
-  // Parse the item data passed from the detail screen
   const existingItem: Item = itemData ? JSON.parse(itemData) : null;
 
   const [sourceUrl, setSourceUrl] = useState(existingItem?.source_url || '');
@@ -23,13 +24,68 @@ export default function EditItemScreen() {
   const [tags, setTags] = useState<string[]>(existingItem?.tags || []);
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
   const [creator, setCreator] = useState(existingItem?.creator || '');
-  const [imageUrl, setImageUrl] = useState(existingItem?.image_url || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const showErrorAlert = (title: string, message: string) => {
+    const options = ["OK"];
+    const cancelButtonIndex = 0;
+
+    showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex,
+        title,
+        message,
+        textStyle: { 
+          color: Colors[colorScheme ?? 'light'].text,
+          fontSize: 17,
+          fontWeight: '400',
+        },
+        titleTextStyle: {
+          color: Colors[colorScheme ?? 'light'].error,
+          fontSize: 17,
+          fontWeight: '600',
+        },
+        messageTextStyle: {
+          color: Colors[colorScheme ?? 'light'].textSecondary,
+          fontSize: 13,
+        },
+        tintColor: Colors[colorScheme ?? 'light'].text,
+      },
+      () => {}
+    );
+  };
+
+  const showSuccessAlert = (message: string, onDismiss?: () => void) => {
+    const options = ["OK"];
+    const cancelButtonIndex = 0;
+
+    showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex,
+        message,
+        textStyle: { 
+          color: Colors[colorScheme ?? 'light'].text,
+          fontSize: 17,
+          fontWeight: '400',
+        },
+        messageTextStyle: {
+          color: Colors[colorScheme ?? 'light'].textSecondary,
+          fontSize: 13,
+        },
+        tintColor: Colors[colorScheme ?? 'light'].text,
+      },
+      () => {
+        if (onDismiss) onDismiss();
+      }
+    );
+  };
+
   const handleSubmit = async () => {
     if (!user) {
-      Alert.alert(
+      showErrorAlert(
         "User Not Authenticated",
         "You need to be logged in to edit an item. Please try logging in again."
       );
@@ -42,7 +98,6 @@ export default function EditItemScreen() {
       categories: categories.filter(cat => cat.trim() !== ''),
       tags: tags.filter(tag => tag.trim() !== ''),
       creator: creator.trim() || undefined,
-      image_url: imageUrl.trim() || undefined,
     };
 
     setIsSubmitting(true);
@@ -51,22 +106,22 @@ export default function EditItemScreen() {
     try {
       const updatedItem: Item = await apiService.updateItem(parseInt(id), updateData);
       console.log('Item updated successfully:', updatedItem);
-      Alert.alert('Success!', 'Item updated successfully.');
-
-      // Navigate back to the item detail screen
-      router.back();
+      showSuccessAlert('Item updated successfully.', () => {
+        // Navigate back to the item detail screen
+        router.back();
+      });
 
     } catch (error) {
       console.error('Failed to update item:', error);
       if (error instanceof ApiServiceError) {
         setSubmitError(error.message);
-        Alert.alert('Error Updating Item', error.message);
+        showErrorAlert('Error Updating Item', error.message);
       } else if (error instanceof Error) {
         setSubmitError(error.message);
-        Alert.alert('Error', 'An unexpected error occurred: ' + error.message);
+        showErrorAlert('Error', 'An unexpected error occurred: ' + error.message);
       } else {
         setSubmitError('An unexpected error occurred.');
-        Alert.alert('Error', 'An unexpected error occurred.');
+        showErrorAlert('Error', 'An unexpected error occurred.');
       }
     } finally {
       setIsSubmitting(false);
@@ -83,16 +138,6 @@ export default function EditItemScreen() {
       <View style={styles.formSection}>
         <Text style={[styles.sectionTitle, { color: Colors[colorScheme ?? 'light'].text }]}>✏️ Edit Post Details</Text>
 
-        {imageUrl && <View style={[styles.imageContainer, { backgroundColor: Colors[colorScheme ?? 'light'].cardBackground, borderColor: Colors[colorScheme ?? 'light'].border }]}>
-          <Image
-            source={{ uri: imageUrl }}
-            style={[styles.image, { backgroundColor: Colors[colorScheme ?? 'light'].placeholderBackground }]}
-            resizeMode="contain"
-            onLoadStart={() => console.log('[Image] Loading started...')}
-            onLoadEnd={() => console.log('[Image] Loading finished.')}
-            onError={(error) => console.error('[Image] Error loading image:', error.nativeEvent.error)}
-          />
-        </View>}
 
         <View style={styles.inputGroup}>
           <Text style={[styles.label, { color: Colors[colorScheme ?? 'light'].text }]}>Source URL</Text>
@@ -156,18 +201,6 @@ export default function EditItemScreen() {
           />
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: Colors[colorScheme ?? 'light'].text }]}>Image URL</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: Colors[colorScheme ?? 'light'].inputBackground, color: Colors[colorScheme ?? 'light'].text, borderColor: Colors[colorScheme ?? 'light'].border }]}
-            value={imageUrl}
-            onChangeText={setImageUrl}
-            placeholder="https://example.com/image.jpg"
-            placeholderTextColor={Colors[colorScheme ?? 'light'].textMuted}
-            keyboardType="url"
-            autoCapitalize="none"
-          />
-        </View>
 
         {submitError && (
           <View style={[styles.errorContainer, { backgroundColor: Colors[colorScheme ?? 'light'].errorBackground, borderColor: Colors[colorScheme ?? 'light'].errorBorder }]}>

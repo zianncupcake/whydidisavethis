@@ -3,7 +3,6 @@ import React from 'react';
 import { Platform } from 'react-native';
 
 import { HapticTab } from '@/components/HapticTab';
-// import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -16,15 +15,22 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].tabIconDefault,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
         tabBarStyle: Platform.select({
           ios: {
-            // Use a transparent background on iOS to show the blur effect
             position: 'absolute',
+            backgroundColor: Colors[colorScheme ?? 'light'].cardBackground,
+            borderTopWidth: 0,
+            elevation: 0,
           },
-          default: {},
+          default: {
+            backgroundColor: Colors[colorScheme ?? 'light'].cardBackground,
+            borderTopWidth: 0,
+            elevation: 0,
+          },
         }),
       }}>
       <Tabs.Screen

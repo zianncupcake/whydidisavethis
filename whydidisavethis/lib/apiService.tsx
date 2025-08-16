@@ -13,7 +13,7 @@ if (!API_BASE_URL) {
 // Create an Axios instance with a base URL and default headers if needed
 const apiClient = axios.create({
     baseURL: API_BASE_URL,
-    timeout: 10000, // 60 second timeout (1 minute)
+    timeout: 30000, // 30 second timeout
     // headers: { 'X-Custom-Header': 'foobar' } // Example global header
 });
 
@@ -176,7 +176,6 @@ export const apiService = {
                     'Authorization': `Bearer ${token}`,
                 },
             });
-            console.log("[apiService] axios getMyProfile: Success", response.data);
             return response.data;
         } catch (error) {
             const axiosError = error as AxiosError<ApiErrorData>;
@@ -259,7 +258,6 @@ export const apiService = {
                     'Content-Type': 'application/json',
                 },
             });
-            console.log("[apiService] axios getItemById: Success", response.data);
             return response.data;
         } catch (error) {
             const axiosError = error as AxiosError<ApiErrorData>;
