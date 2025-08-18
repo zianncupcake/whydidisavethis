@@ -40,7 +40,7 @@ export default function LoginScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: Colors[colorScheme ?? 'light'].background }]}>
-            <Text style={[styles.title, { color: Colors[colorScheme ?? 'light'].text }]}>Login</Text>
+            <Text style={[styles.title, { color: Colors[colorScheme ?? 'light'].text }]}>Welcome!</Text>
             <TextInput
                 style={[styles.input, { backgroundColor: Colors[colorScheme ?? 'light'].inputBackground, color: Colors[colorScheme ?? 'light'].text, borderColor: Colors[colorScheme ?? 'light'].border }]}
                 placeholder="Username"

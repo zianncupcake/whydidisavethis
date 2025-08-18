@@ -213,7 +213,6 @@ export default function ItemDetailScreen() {
         return (
             <View style={[styles.centered, { backgroundColor: Colors[colorScheme ?? 'light'].background }]}>
                 <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].primary} />
-                <Text style={{ color: Colors[colorScheme ?? 'light'].text }}>Loading item details...</Text>
             </View>
         );
     }
@@ -248,7 +247,6 @@ export default function ItemDetailScreen() {
             {isDeleting && (
                 <View style={styles.loadingOverlay}>
                     <ActivityIndicator size="large" color="#fff" />
-                    <Text style={[styles.loadingText, { color: '#fff' }]}>Deleting...</Text>
                 </View>
             )}
 
@@ -382,9 +380,5 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 1000,
-    },
-    loadingText: {
-        marginTop: 10,
-        fontSize: 16,
     }
 });

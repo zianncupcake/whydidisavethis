@@ -17,8 +17,6 @@ export default function TabTwoScreen() {
   const [socialMediaLink, setSocialMediaLink] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [notes, setNotes] = useState('');
-  const [categories, setCategories] = useState<string[]>([]);
-  const [suggestedCategories, setSuggestedCategories] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
   const [creator, setCreator] = useState('');
@@ -172,10 +170,9 @@ export default function TabTwoScreen() {
             if (data && !error) {
               setSourceUrl(submittedLink);
               setNotes(data.desc || '');
-              // setCategories(data.diversificationLabels ? data.diversificationLabels.join(', ') : '');
-              // setTags(data.suggestedWords ? data.suggestedWords.join(', ') : '');
-              setSuggestedTags(Array.isArray(data.suggestedWords) ? data.suggestedWords.filter((tag: string) => tag.trim() !== '') : []);
-              setSuggestedCategories(Array.isArray(data.diversificationLabels) ? data.diversificationLabels.filter((cat: string) => cat.trim() !== '') : []);
+              const suggestedWords = Array.isArray(data.suggestedWords) ? data.suggestedWords.filter((tag: string) => tag.trim() !== '') : [];
+              const diversificationLabels = Array.isArray(data.diversificationLabels) ? data.diversificationLabels.filter((label: string) => label.trim() !== '') : [];
+              setSuggestedTags([...suggestedWords, ...diversificationLabels]);
               setCreator(data.creator || '');
               setImageUrl(data.r2ImageUrl || '');
               logToConsole(`ONMESSAGE: SUCCESS processed for ${taskId}. Setting isLoading=false, currentTaskId=null.`);
@@ -233,7 +230,7 @@ export default function TabTwoScreen() {
     };
   }, [isLoading, currentTaskId, BACKEND_API_URL]);
 
-  const processAutofill = useCallback(async (urlToSubmit: string) => {
+  const processAutofill = useCallback(async (urlToSubmit: string, retryCount = 0) => {
     // Prevent new submissions if one is already in progress
     if (isLoading) {
       logToConsole(`Autofill for "${urlToSubmit}" attempted while task "${currentTaskId || 'N/A'}" is already processing. Ignoring new request.`);
@@ -254,13 +251,11 @@ export default function TabTwoScreen() {
 
     setTags([]);
     setSuggestedTags([]);
-    setCategories([]);
-    setSuggestedCategories([]);
     setIsLoading(true); // Set loading state for the current operation
     setCurrentTaskId(null); // Reset task ID for the new submission
 
     const submitUrlPath = `${BACKEND_API_URL}/submit_url`;
-    logToConsole('Submitting URL:', urlToSubmit, 'to:', submitUrlPath);
+    logToConsole('Submitting URL:', urlToSubmit, 'to:', submitUrlPath, retryCount > 0 ? `(retry ${retryCount})` : '');
 
     try {
       logToConsole('PROCESS_AUTOFILL: Attempting response.json()...');
@@ -271,6 +266,21 @@ export default function TabTwoScreen() {
       });
       // const data = await response.json();
       logToConsole('PROCESS_AUTOFILL: Fetch response received. Status:', response?.status, 'Ok:', response?.ok);
+      
+      // Check if this is a 403 or 5xx error and we haven't retried yet
+      if (!response.ok && retryCount === 0 && (response.status === 403 || response.status >= 500)) {
+        logToConsole(`PROCESS_AUTOFILL: Got ${response.status} error, server might be sleeping. Retrying in 2 seconds...`);
+        
+        // Wait 2 seconds before retrying to give server time to wake up
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Reset loading state before retry
+        setIsLoading(false);
+        
+        // Retry the request
+        return processAutofill(urlToSubmit, retryCount + 1);
+      }
+      
       let data;
       try {
         logToConsole('PROCESS_AUTOFILL: Attempting response.json()...');
@@ -311,6 +321,15 @@ export default function TabTwoScreen() {
       }
     } catch (error: any) {
       logToConsole('Autofill API submission error:', error);
+      
+      // If this was the first attempt and we got a network error, try once more
+      if (retryCount === 0 && error.message && (error.message.includes('fetch') || error.message.includes('network'))) {
+        logToConsole('PROCESS_AUTOFILL: Network error detected, retrying in 2 seconds...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        setIsLoading(false);
+        return processAutofill(urlToSubmit, retryCount + 1);
+      }
+      
       showErrorAlert('Submission Error', `Could not submit URL: ${error.message}`);
       setIsLoading(false); // Reset loading on error
     }
@@ -361,7 +380,6 @@ export default function TabTwoScreen() {
     const postData: ItemCreatePayload = {
       source_url: sourceUrl.trim() || undefined,
       notes: notes.trim() || undefined,
-      categories: categories.filter(cat => cat.trim() !== ''),
       tags: tags.filter(tag => tag.trim() !== ''),
       creator: creator.trim() || undefined,
       image_url: imageUrl.trim() || undefined,
@@ -374,9 +392,9 @@ export default function TabTwoScreen() {
     try {
       const createdItem: Item = await apiService.addItem(postData);
       console.log('Item created successfully:', createdItem);
-      showSuccessAlert('Item added successfully.');
-
-      router.replace('/');
+      showSuccessAlert('Item added successfully.', () => {
+        router.replace('/');
+      });
 
       // Optionally navigate away or refresh a list
       // router.back(); or router.push('/items/' + createdItem.id);
@@ -397,9 +415,7 @@ export default function TabTwoScreen() {
       setIsSubmitting(false);
       setSourceUrl('');
       setNotes('');
-      setCategories([]);
       setTags([]);
-      setSuggestedCategories([]);
       setSuggestedTags([]);
       setCreator('');
       setImageUrl('');
@@ -420,7 +436,7 @@ export default function TabTwoScreen() {
         <View style={styles.inputContainer}>
           <TextInput
             style={[styles.linkInput, { backgroundColor: Colors[colorScheme ?? 'light'].inputBackground, color: Colors[colorScheme ?? 'light'].text, borderColor: Colors[colorScheme ?? 'light'].border }]}
-            placeholder="Paste Instagram or TikTok link"
+            placeholder="Paste Instagram / TikTok / Youtube link"
             placeholderTextColor={Colors[colorScheme ?? 'light'].textMuted}
             value={socialMediaLink}
             onChangeText={setSocialMediaLink}
@@ -490,17 +506,6 @@ export default function TabTwoScreen() {
           />
         </View>
 
-        <View style={styles.inputGroup}>
-          <PillInput
-            label="Categories"
-            placeholder="Add categories..."
-            selectedItems={categories}
-            onSetSelectedItems={setCategories}
-            suggestedItems={suggestedCategories}
-            onSetSuggestedItems={setSuggestedCategories}
-            editable={!isLoading}
-          />
-        </View>
 
         <View style={styles.inputGroup}>
           <PillInput
